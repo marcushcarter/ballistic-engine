@@ -1,4 +1,4 @@
-#include <editor/center_view/memory/memory.h>
+#include <editor/docking/center_view/memory/memory.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <core/base/utils.h>

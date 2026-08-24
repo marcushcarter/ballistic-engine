@@ -1,4 +1,4 @@
-#include <editor/panel/asset_browser/asset_browser_toolbar.h>
+#include <editor/docking/asset_browser/asset_browser_toolbar.h>
 #include <editor/editor_resources.h>
 #include <core/io/path.h>
 #include <drivers/imgui/imgui_driver.h>

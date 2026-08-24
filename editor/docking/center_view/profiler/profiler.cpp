@@ -1,4 +1,4 @@
-#include <editor/center_view/profiler/profiler.h>
+#include <editor/docking/center_view/profiler/profiler.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <imgui.h>

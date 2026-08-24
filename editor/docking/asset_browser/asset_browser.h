@@ -1,7 +1,7 @@
 #pragma once
-#include <editor/panel/panel.h>
-#include <editor/panel/asset_browser/asset_browser_grid.h>
-#include <editor/panel/asset_browser/asset_browser_toolbar.h>
+#include <editor/docking/panel.h>
+#include <editor/docking/asset_browser/asset_browser_grid.h>
+#include <editor/docking/asset_browser/asset_browser_toolbar.h>
 #include <filesystem>
 
 namespace ballistic {

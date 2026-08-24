@@ -1,6 +1,7 @@
-#include <editor/center_view/center_view.h>
-#include <core/rendering/renderer.h>
+#include <editor/docking/center_view/center_view.h>
 #include <drivers/imgui/imgui_driver.h>
+#include <drivers/imgui/imgui_helpers.h>
+#include <core/rendering/renderer.h>
 #include <IconsFontAwesome6.h>
 #include <imgui_internal.h>
 
@@ -66,12 +67,6 @@ void CenterView::_draw_scene(EditorContext& ctx)
 
 void CenterView::draw(EditorContext& ctx)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("Viewportt", nullptr, ImGuiWindowFlags_NoScrollbar);
-    ImGui::PopStyleVar();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
     ImVec2 avail = ImGui::GetContentRegionAvail();
     const float strip_h = ImGui::GetFrameHeight();
     const float handle_h = 6.0f;
@@ -100,30 +95,13 @@ void CenterView::draw(EditorContext& ctx)
     ImGui::BeginChild("##top", ImVec2(avail.x, scene_h), false, ImGuiWindowFlags_NoScrollbar);
     _draw_scene(ctx);
     ImGui::EndChild();
-
-    ImGui::InvisibleButton("##vsplit", ImVec2(avail.x, handle_h));
-    bool hovered = ImGui::IsItemHovered();
-    bool active = ImGui::IsItemActive();
-    if (hovered || active) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-
-
-    if (active) {
-        float dy = ImGui::GetIO().MouseDelta.y;
-        if (debugger.collapsed) {
-            if (dy < 0.0f) {
-                debugger.collapsed = false;
-                split_ratio = 1.0f - (min_content / usable);
-            split_ratio = 0.6f;
-            }
-        } else {
-            split_ratio += dy / usable;
-            if (usable * (1.0f - split_ratio) < min_content) {
-                debugger.collapsed = true;
-                split_ratio = 0.5f;
-            }
-        }
-    }
     
+    SplitterState s = imgui_splitter("##vsplit", SplitAxis::Y, ImVec2(avail.x, handle_h));
+    if (s.active) {
+        if (debugger.collapsed && s.activated) split_ratio = 1.0f;
+        split_ratio += s.delta / usable;
+        debugger.collapsed = (usable * (1.0f - split_ratio) < min_content);
+    }
     
     ImVec2 bmin = ImGui::GetItemRectMin();
     ImVec2 bmax = ImGui::GetItemRectMax();
@@ -132,19 +110,20 @@ void CenterView::draw(EditorContext& ctx)
     
     const float grip_w = 40.0f;
     float gx = ImFloor((bmin.x + bmax.x) * 0.5f);
-    ImU32 grip_col = ImGui::GetColorU32(active ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
+    ImU32 grip_col = ImGui::GetColorU32(s.active ? ImGuiCol_SeparatorActive : s.hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
     dl->AddRectFilled(ImVec2(gx - grip_w * 0.5f, cy - 2.0f), ImVec2(gx + grip_w * 0.5f, cy + 2.0f), grip_col, 2.0f);
 
     if (!debugger.collapsed) {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8)); // child padding, killed by the layout's 0-wrap
         ImGui::BeginChild("##bottom", ImVec2(avail.x, content_h), true, ImGuiWindowFlags_NoScrollbar);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 4));   // normal spacing inside the debugger
         debugger.draw_content(ctx);
+        ImGui::PopStyleVar();
         ImGui::EndChild();
+        ImGui::PopStyleVar();
     }
 
     debugger.draw_strip(ctx);
-
-    ImGui::PopStyleVar();
-    ImGui::End();
 }
     
 }

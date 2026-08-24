@@ -1,6 +1,6 @@
 #pragma once
-#include <editor/center_view/debug_tab.h>
-#include <editor/center_view/memory/memory_transients.h>
+#include <editor/docking/center_view/debug_tab.h>
+#include <editor/docking/center_view/memory/memory_transients.h>
 #include <cstdint>
 #include <vector>
 

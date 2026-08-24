@@ -71,8 +71,6 @@ Error EditorApplication::on_init()
     BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
 
     _load_state();
-    
-    editor.apply_settings();
     settings.theme.apply();
 
     return Ok;
@@ -132,8 +130,6 @@ void EditorApplication::close_project()
 
 void EditorApplication::_load_state()
 {
-    editor.apply_settings();
-
     std::ifstream in(Paths::roaming_data() / "editor_state.cfg", std::ios::binary);
     if (!in) return;
 
@@ -145,6 +141,25 @@ void EditorApplication::_load_state()
     }
     const toml::table& tbl = parsed;
 
+    auto lv = tbl.at_path("layout");
+    if ((int)lv["version"].value_or((int64_t)-1) == Editor::VERSION) {
+        editor.split_x = (float)lv["split_x"].value_or((double)editor.split_x);
+        editor.split_y = (float)lv["split_y"].value_or((double)editor.split_y);
+        editor.center_view.split_ratio        = (float)lv["center_split"].value_or((double)editor.center_view.split_ratio);
+        editor.center_view.debugger.collapsed = lv["center_collapsed"].value_or(editor.center_view.debugger.collapsed);
+        editor.center_view.debugger.active    = (int)lv["center_tab"].value_or((int64_t)editor.center_view.debugger.active);
+        editor.right_top.active_name    = lv["active_top"].value_or(std::string{});
+        editor.right_bottom.active_name = lv["active_bottom"].value_or(std::string{});
+
+        if (const toml::table* pans = tbl.at_path("panels").as_table()) {
+            for (auto& p : editor.panels) {
+                auto pv = (*pans)[p->name()];
+                p->open = pv["open"].value_or(p->open);
+                p->zone = dock_zone_from_string(pv["zone"].value_or(std::string(to_string(p->zone))), p->zone);
+            }
+        }
+    }
+
     settings.theme.preset = Theme::theme_preset_index(from_toml(tbl.at_path("theme.preset"), "Custom"));
     settings.theme.base = from_toml(tbl.at_path("theme.base"), settings.theme.base);
     settings.theme.accent = from_toml(tbl.at_path("theme.accent"), settings.theme.accent);
@@ -155,19 +170,11 @@ void EditorApplication::_load_state()
 
     renderer.graph.profiler.enabled = tbl.at_path("debugger.profiler.enabled").value_or(renderer.graph.profiler.enabled);
 
-    if (const toml::table* panels = tbl.at_path("panels").as_table()) {
-        for (auto&& [name, node] : *panels)
-            if (auto open = node.value<bool>())
-                editor.panel_open[std::string(name.str())] = *open;
-    }
-
     settings.theme.apply();
 }
 
 void EditorApplication::_save_state()
 {
-    editor.store_settings();
-
     const char* preset_name = Theme::theme_preset_name(settings.theme.preset);
 
     toml::table theme;
@@ -182,16 +189,34 @@ void EditorApplication::_save_state()
     
     toml::table profiler;
     profiler.insert_or_assign("enabled", static_cast<bool>(renderer.graph.profiler.enabled));
+    
     toml::table debugger;
     debugger.insert_or_assign("profiler", std::move(profiler));
 
+    toml::table layout;
+    layout.insert_or_assign("version", (int64_t)Editor::VERSION);
+    layout.insert_or_assign("split_x", (double)editor.split_x);
+    layout.insert_or_assign("split_y", (double)editor.split_y);
+    layout.insert_or_assign("center_split", (double)editor.center_view.split_ratio);
+    layout.insert_or_assign("center_collapsed", (bool)editor.center_view.debugger.collapsed);
+    layout.insert_or_assign("center_tab", (int64_t)editor.center_view.debugger.active);
+    layout.insert_or_assign("active_top", editor.right_top.active_name);
+    layout.insert_or_assign("active_bottom", editor.right_bottom.active_name);
+
     toml::table panels;
-    for (const auto& [name, open] : editor.panel_open) panels.insert_or_assign(name, open);
+    for (auto& p : editor.panels) {
+        toml::table pt;
+        pt.insert_or_assign("open", (bool)p->open);
+        pt.insert_or_assign("zone", to_string(p->zone));
+        panels.insert_or_assign(p->name(), std::move(pt));
+    }
 
     toml::table root;
     root.insert_or_assign("theme", std::move(theme));
     root.insert_or_assign("window", std::move(window));
     root.insert_or_assign("debugger", std::move(debugger));
+    
+    root.insert_or_assign("layout", std::move(layout));
     root.insert_or_assign("panels", std::move(panels));
 
     std::ofstream out(Paths::roaming_data() / "editor_state.cfg", std::ios::binary);
@@ -393,25 +418,25 @@ void EditorApplication::_draw_shared_menu_items()
         // search bar
         ImGui::Separator();
 
-        if (ImGui::MenuItem("New")) {}
-        if (ImGui::MenuItem("Open")) {}
-        if (ImGui::MenuItem("Export Scene")) {}
+        // if (ImGui::MenuItem("New")) {}
+        // if (ImGui::MenuItem("Open")) {}
+        // if (ImGui::MenuItem("Export Scene")) {}
 
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Open Asset")) {}
+        // if (ImGui::MenuItem("Open Asset")) {}
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Save Current Scene")) {}
-        if (ImGui::MenuItem("Save Current Scene As")) {}
+        // if (ImGui::MenuItem("Save Current Scene")) {}
+        // if (ImGui::MenuItem("Save Current Scene As")) {}
         if (ImGui::MenuItem("Save All")) project.save();
-        if (ImGui::MenuItem("Choose Files to Save")) {}
+        // if (ImGui::MenuItem("Choose Files to Save")) {}
 
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Import Into Scene")) {}
-        if (ImGui::MenuItem("Export All")) {}
+        // if (ImGui::MenuItem("Import Into Scene")) {}
+        // if (ImGui::MenuItem("Export All")) {}
         
         // if (ImGui::MenuItem("Take Screenshot", "Ctrl+F12")) {   
         //     EditorRenderPath* path = static_cast<EditorRenderPath*>(render_path);
@@ -420,16 +445,16 @@ void EditorApplication::_draw_shared_menu_items()
 
         ImGui::Separator();
         
-        if (ImGui::MenuItem("New")) {}
-        if (ImGui::MenuItem("Open")) {}
-        if (ImGui::MenuItem("Zip Project")) {}
+        // if (ImGui::MenuItem("New")) {}
+        // if (ImGui::MenuItem("Open")) {}
+        // if (ImGui::MenuItem("Zip Project")) {}
         if (ImGui::MenuItem("Open Current Project Directory")) Paths::reveal_in_explorer(project.root);
-        if (ImGui::MenuItem("Recent Projects")) {}
+        // if (ImGui::MenuItem("Recent Projects")) {}
 
         ImGui::Separator();        
 
         if (ImGui::MenuItem("Exit")) close_project();
-        // if (ImGui::MenuItem("Quit", "Alt+F4")) win32.window_request_close();
+        if (ImGui::MenuItem("Quit", "Alt+F4")) win32.window_request_close();
         
         ImGui::EndMenu();
     }
@@ -438,26 +463,26 @@ void EditorApplication::_draw_shared_menu_items()
         // search bar
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Undo")) {}
-        if (ImGui::MenuItem("Redo")) {}
-        if (ImGui::MenuItem("Undo History")) {}
+        // if (ImGui::MenuItem("Undo")) {}
+        // if (ImGui::MenuItem("Redo")) {}
+        // if (ImGui::MenuItem("Undo History")) {}
         
         ImGui::Separator();
         
-        ImGui::BeginDisabled(true);
-        if (ImGui::MenuItem("Cut")) {}
-        if (ImGui::MenuItem("Copy")) {}
-        if (ImGui::MenuItem("Paste")) {}
-        if (ImGui::MenuItem("Duplicate")) {}
-        if (ImGui::MenuItem("Delete")) {}
-        ImGui::EndDisabled();
+        // ImGui::BeginDisabled(true);
+        // if (ImGui::MenuItem("Cut")) {}
+        // if (ImGui::MenuItem("Copy")) {}
+        // if (ImGui::MenuItem("Paste")) {}
+        // if (ImGui::MenuItem("Duplicate")) {}
+        // if (ImGui::MenuItem("Delete")) {}
+        // ImGui::EndDisabled();
         
         ImGui::Separator();
 
         if (ImGui::MenuItem("Editor Settings")) popups.open("Editor Settings");
         if (ImGui::MenuItem("Project Settings")) popups.open("Project Settings");
-        if (ImGui::MenuItem("Keyboard Shortcuts")) {}
-        if (ImGui::MenuItem("Plugins")) {}
+        // if (ImGui::MenuItem("Keyboard Shortcuts")) {}
+        // if (ImGui::MenuItem("Plugins")) {}
         
         if (ImGui::MenuItem("Open Editor Data Folder")) Paths::reveal_in_explorer(Paths::roaming_data());
         
@@ -472,13 +497,13 @@ void EditorApplication::_draw_shared_menu_items()
         
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Device Output")) {}
-        if (ImGui::MenuItem("Message")) {}
-        if (ImGui::MenuItem("Output Log")) {}
+        // if (ImGui::MenuItem("Device Output")) {}
+        // if (ImGui::MenuItem("Message")) {}
+        // if (ImGui::MenuItem("Output Log")) {}
         
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Enable Fullscreen", "Alt+F11")) {}
+        // if (ImGui::MenuItem("Enable Fullscreen", "Alt+F11")) {}
         
         ImGui::Separator();
         
@@ -489,19 +514,19 @@ void EditorApplication::_draw_shared_menu_items()
         // search bar
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Render Resource Viewer")) {}
+        // if (ImGui::MenuItem("Render Resource Viewer")) {}
         
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Debug")) {
+        // if (ImGui::BeginMenu("Debug")) {
 
-            ImGui::EndMenu();
-        }
+        //     ImGui::EndMenu();
+        // }
         
-        if (ImGui::BeginMenu("Profiler")) {
+        // if (ImGui::BeginMenu("Profiler")) {
 
-            ImGui::EndMenu();
-        }
+        //     ImGui::EndMenu();
+        // }
         
         ImGui::EndMenu();
     }
@@ -510,7 +535,7 @@ void EditorApplication::_draw_shared_menu_items()
         // search bar
         ImGui::Separator();
         
-        if (ImGui::MenuItem("Play In Editor Current Scene")) {}
+        // if (ImGui::MenuItem("Play In Editor Current Scene")) {}
         if (ImGui::MenuItem("Export")) popups.open("Export");
         
         ImGui::EndMenu();

@@ -1,4 +1,5 @@
 #include <drivers/imgui/imgui_helpers.h>
+#include <imgui_internal.h>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdint>
@@ -117,6 +118,30 @@ ImU32 imgui_pct_col(float pct)
     if (pct < 0.75f) return IM_COL32( 88, 180, 120, 255);
     if (pct < 0.90f) return IM_COL32(210, 170,  70, 255);
     return IM_COL32(210,  90,  80, 255);
+}
+
+SplitterState imgui_splitter(const char* id, SplitAxis axis, ImVec2 size, float grip_len)
+{
+    ImGui::InvisibleButton(id, size);
+    SplitterState s;
+    s.hovered = ImGui::IsItemHovered();
+    s.active = ImGui::IsItemActive();
+    s.activated = ImGui::IsItemActivated();
+
+    if (s.hovered || s.active) ImGui::SetMouseCursor(axis == SplitAxis::X ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS);
+    if (s.active) s.delta = (axis == SplitAxis::X) ? ImGui::GetIO().MouseDelta.x : ImGui::GetIO().MouseDelta.y;
+
+    ImVec2 mn = ImGui::GetItemRectMin();
+    ImVec2 mx = ImGui::GetItemRectMax();
+    float cx = ImFloor((mn.x + mx.x) * 0.5f);
+    float cy = ImFloor((mn.y + mx.y) * 0.5f);
+    ImU32 col = ImGui::GetColorU32(s.active ? ImGuiCol_SeparatorActive : s.hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
+    const float t = 2.0f;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    if (axis == SplitAxis::X) dl->AddRectFilled(ImVec2(cx - t, cy - grip_len * 0.5f), ImVec2(cx + t, cy + grip_len * 0.5f), col, t);
+    else dl->AddRectFilled(ImVec2(cx - grip_len * 0.5f, cy - t), ImVec2(cx + grip_len * 0.5f, cy + t), col, t);
+    
+    return s;
 }
 
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include <editor/center_view/debugger.h>
+#include <editor/docking/center_view/debugger.h>
 #include <editor/editor_context.h>
 #include <imgui.h>
 #include <cstdint>

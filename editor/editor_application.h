@@ -1,12 +1,11 @@
 
 #pragma once
 #include <core/application/application.h>
-#include <editor/editor_mode/editor.h>
+#include <editor/docking/editor.h>
 #include <editor/editor_mode/project_manager.h>
 #include <editor/editor_settings.h>
 #include <editor/editor_resources.h>
 #include <editor/assets/asset_import_tracker.h>
-#include <editor/panel/panel.h>
 #include <editor/popup/popup_manager.h>
 #include <core/rendering/render_path/editor_render_path.h>
 #include <core/rendering/render_path/project_manager_render_path.h>

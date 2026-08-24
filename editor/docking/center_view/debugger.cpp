@@ -1,8 +1,8 @@
-#include <editor/center_view/debugger.h>
+#include <editor/docking/center_view/debugger.h>
 
-#include <editor/center_view/output/output.h>
-#include <editor/center_view/profiler/profiler.h>
-#include <editor/center_view/memory/memory.h>
+#include <editor/docking/center_view/output/output.h>
+#include <editor/docking/center_view/profiler/profiler.h>
+#include <editor/docking/center_view/memory/memory.h>
 
 namespace ballistic {
 

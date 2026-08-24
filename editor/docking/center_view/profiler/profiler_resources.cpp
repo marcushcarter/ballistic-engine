@@ -1,4 +1,4 @@
-#include <editor/center_view/profiler/profiler_resources.h>
+#include <editor/docking/center_view/profiler/profiler_resources.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <vulkan/vk_enum_string_helper.h>

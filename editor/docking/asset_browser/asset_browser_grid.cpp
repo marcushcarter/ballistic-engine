@@ -1,4 +1,4 @@
-#include <editor/panel/asset_browser/asset_browser_grid.h>
+#include <editor/docking/asset_browser/asset_browser_grid.h>
 #include <core/rendering/renderer.h>
 #include <editor/editor_resources.h>
 #include <drivers/imgui/imgui_driver.h>

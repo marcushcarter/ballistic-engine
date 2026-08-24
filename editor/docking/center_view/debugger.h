@@ -1,5 +1,5 @@
 #pragma once
-#include <editor/center_view/debug_tab.h>
+#include <editor/docking/center_view/debug_tab.h>
 #include <imgui.h>
 #include <vector>
 #include <memory>
