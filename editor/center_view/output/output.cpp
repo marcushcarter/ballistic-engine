@@ -1,4 +1,4 @@
-#include <editor/panel/console/console.h>
+#include <editor/center_view/output/output.h>
 #include <drivers/windows/dialogs_win32.h>
 #include <core/base/error.h>
 #include <imgui.h>
@@ -7,10 +7,8 @@
 
 namespace ballistic {
 
-void ConsolePanel::draw_contents(EditorContext& ctx)
-{
-    (void)ctx;
-    
+void OutputDebugTab::draw(EditorContext&)
+{    
     LogSink& sink = log_sink();
 
     float input_height = ImGui::GetFrameHeightWithSpacing();
@@ -70,5 +68,5 @@ void ConsolePanel::draw_contents(EditorContext& ctx)
 
     if (enter_pressed) ImGui::SetKeyboardFocusHere(-1);
 }
-
+    
 }

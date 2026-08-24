@@ -389,44 +389,132 @@ void EditorApplication::_draw_titlebar()
 
 void EditorApplication::_draw_shared_menu_items()
 {
-    if (ImGui::MenuItem("Save")) project.save();
+    if (ImGui::BeginMenu("File")) {
+        // search bar
+        ImGui::Separator();
 
-    if (ImGui::BeginMenu("Project")) {
-        if (ImGui::MenuItem("Project Settings")) popups.open("Project Settings");
+        if (ImGui::MenuItem("New")) {}
+        if (ImGui::MenuItem("Open")) {}
+        if (ImGui::MenuItem("Export Scene")) {}
+
         ImGui::Separator();
-        if (ImGui::MenuItem("Version Control")) {}
+        
+        if (ImGui::MenuItem("Open Asset")) {}
+
         ImGui::Separator();
-        if (ImGui::MenuItem("Export")) popups.open("Export");
-        // if (ImGui::MenuItem("Pack Project as ZIP")) {
-        //     // file dialog
-        //     // export project
-        //     // convert to zip
-        //     // delete exported folder
+
+        if (ImGui::MenuItem("Save Current Scene")) {}
+        if (ImGui::MenuItem("Save Current Scene As")) {}
+        if (ImGui::MenuItem("Save All")) project.save();
+        if (ImGui::MenuItem("Choose Files to Save")) {}
+
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Import Into Scene")) {}
+        if (ImGui::MenuItem("Export All")) {}
+        
+        // if (ImGui::MenuItem("Take Screenshot", "Ctrl+F12")) {   
+        //     EditorRenderPath* path = static_cast<EditorRenderPath*>(render_path);
+        //     path->screenshot.requested = true;
         // }
+
         ImGui::Separator();
-        if (ImGui::MenuItem("Quit to Project List")) close_project();
-        if (ImGui::MenuItem("Quit", "Alt+F4")) win32.window_request_close();
-        ImGui::EndMenu();
-    }
-    
-    if (ImGui::BeginMenu("Scene")) {
+        
+        if (ImGui::MenuItem("New")) {}
+        if (ImGui::MenuItem("Open")) {}
+        if (ImGui::MenuItem("Zip Project")) {}
+        if (ImGui::MenuItem("Open Current Project Directory")) Paths::reveal_in_explorer(project.root);
+        if (ImGui::MenuItem("Recent Projects")) {}
+
+        ImGui::Separator();        
+
+        if (ImGui::MenuItem("Exit")) close_project();
+        // if (ImGui::MenuItem("Quit", "Alt+F4")) win32.window_request_close();
+        
         ImGui::EndMenu();
     }
 
-    if (ImGui::BeginMenu("Editor")) {
+    if (ImGui::BeginMenu("Edit")) {        
+        // search bar
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Undo")) {}
+        if (ImGui::MenuItem("Redo")) {}
+        if (ImGui::MenuItem("Undo History")) {}
+        
+        ImGui::Separator();
+        
+        ImGui::BeginDisabled(true);
+        if (ImGui::MenuItem("Cut")) {}
+        if (ImGui::MenuItem("Copy")) {}
+        if (ImGui::MenuItem("Paste")) {}
+        if (ImGui::MenuItem("Duplicate")) {}
+        if (ImGui::MenuItem("Delete")) {}
+        ImGui::EndDisabled();
+        
+        ImGui::Separator();
+
         if (ImGui::MenuItem("Editor Settings")) popups.open("Editor Settings");
-        ImGui::Separator();
-        if (ImGui::MenuItem("Take Screenshot", "Ctrl+F12")) {   
-            EditorRenderPath* path = static_cast<EditorRenderPath*>(render_path);
-            path->screenshot.requested = true;
-        }
-        if (ImGui::MenuItem("Toggle Fullscreen", "Alt+F11")) {}
-        ImGui::Separator();
+        if (ImGui::MenuItem("Project Settings")) popups.open("Project Settings");
+        if (ImGui::MenuItem("Keyboard Shortcuts")) {}
+        if (ImGui::MenuItem("Plugins")) {}
+        
         if (ImGui::MenuItem("Open Editor Data Folder")) Paths::reveal_in_explorer(Paths::roaming_data());
+        
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Window")) {
+        // search bar
+        ImGui::Separator();
+
+        editor.draw_menu();
+        
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Device Output")) {}
+        if (ImGui::MenuItem("Message")) {}
+        if (ImGui::MenuItem("Output Log")) {}
+        
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Enable Fullscreen", "Alt+F11")) {}
+        
+        ImGui::Separator();
+        
         ImGui::EndMenu();
     }
     
-    editor.draw_menu();
+    if (ImGui::BeginMenu("Tools")) {
+        // search bar
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Render Resource Viewer")) {}
+        
+        ImGui::Separator();
+
+        if (ImGui::BeginMenu("Debug")) {
+
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("Profiler")) {
+
+            ImGui::EndMenu();
+        }
+        
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Export")) {
+        // search bar
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Play In Editor Current Scene")) {}
+        if (ImGui::MenuItem("Export")) popups.open("Export");
+        
+        ImGui::EndMenu();
+    }
 }
 
 EditorContext EditorApplication::_make_context()

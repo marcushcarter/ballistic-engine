@@ -1,4 +1,4 @@
-#include <editor/panel/profiler/profiler.h>
+#include <editor/center_view/profiler/profiler.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <imgui.h>
@@ -6,12 +6,7 @@
 
 namespace ballistic {
 
-void ProfilerPanel::before_begin()
-{
-    ImGui::SetNextWindowSize(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
-}
-
-void ProfilerPanel::draw_contents(EditorContext& ctx)
+void ProfilerDebugTab::draw(EditorContext& ctx)
 {
     auto& profiler = ctx.renderer->graph.profiler;
 

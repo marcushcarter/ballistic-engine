@@ -1,4 +1,4 @@
-#include <editor/panel/profiler/profiler_distribution.h>
+#include <editor/center_view/profiler/profiler_distribution.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <imgui.h>

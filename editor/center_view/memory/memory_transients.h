@@ -5,7 +5,7 @@
 
 namespace ballistic {
 
-struct MemoryProfilerTransients
+struct MemoryTransients
 {
     uint32_t max_rows = 100;
 

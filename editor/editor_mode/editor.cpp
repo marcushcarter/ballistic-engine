@@ -1,10 +1,6 @@
 #include <editor/editor_mode/editor.h>
 #include <core/rendering/renderer.h>
-#include <editor/panel/viewport/viewport.h>
-#include <editor/panel/console/console.h>
-#include <editor/panel/profiler/profiler.h>
 #include <editor/panel/asset_browser/asset_browser.h>
-#include <editor/panel/memory_profiler/memory_profiler.h>
 #include <core/rendering/render_path/editor_render_path.h>
 #include <editor/editor_settings.h>
 #include <imgui.h>
@@ -15,11 +11,9 @@ Error Editor::initialize()
 {
     using enum Error;
 
-    panels.push_back(std::make_unique<ViewportPanel>());
-    panels.push_back(std::make_unique<ConsolePanel>());
-    panels.push_back(std::make_unique<ProfilerPanel>());
-    panels.push_back(std::make_unique<MemoryProfilerPanel>());
     panels.push_back(std::make_unique<AssetBrowserPanel>());
+
+    center_view.initialize();
 
     return Ok;
 }
@@ -53,6 +47,7 @@ void Editor::_begin_dockspace()
 void Editor::on_update(EditorContext& ctx, float)
 {
     _begin_dockspace();
+    center_view.draw(ctx);
     for (auto& p : panels) p->draw(ctx);
 }
 

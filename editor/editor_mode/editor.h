@@ -2,6 +2,7 @@
 #include <editor/editor_context.h>
 #include <editor/panel/panel.h>
 #include <core/base/error.h>
+#include <editor/center_view/center_view.h>
 #include <memory>
 #include <vector>
 #include <map>
@@ -12,6 +13,8 @@ struct Editor
 {    
     std::vector<std::unique_ptr<Panel>> panels;
     std::map<std::string, bool> panel_open;
+
+    CenterView center_view;
 
     Error initialize();
     void shutdown();

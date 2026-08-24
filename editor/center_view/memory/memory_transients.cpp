@@ -1,4 +1,4 @@
-#include <editor/panel/memory_profiler/memory_profiler_transients.h>
+#include <editor/center_view/memory/memory_transients.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <core/base/utils.h>
@@ -9,7 +9,7 @@
 
 namespace ballistic {
 
-void MemoryProfilerTransients::draw(EditorContext& ctx)
+void MemoryTransients::draw(EditorContext& ctx)
 {
     RenderGraph* graph = &ctx.renderer->graph;
 

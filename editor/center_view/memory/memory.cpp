@@ -1,4 +1,4 @@
-#include <editor/panel/memory_profiler/memory_profiler.h>
+#include <editor/center_view/memory/memory.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/renderer.h>
 #include <core/base/utils.h>
@@ -8,12 +8,7 @@
 
 namespace ballistic {
 
-void MemoryProfilerPanel::before_begin()
-{
-    ImGui::SetNextWindowSize(ImVec2(620, 720), ImGuiCond_FirstUseEver);
-}
-
-void MemoryProfilerPanel::draw_contents(EditorContext& ctx)
+void MemoryDebugTab::draw(EditorContext& ctx)
 {
     drivers::DeviceDriverVulkan* dd = ctx.renderer->dd;
 
