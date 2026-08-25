@@ -22,7 +22,7 @@ void imgui_tri_right(ImU32 p_color);
 ImU32 imgui_rg_category_u32(const char* cat, float alpha = 1.0f);
 ImU32 imgui_pct_col(float pct);
 
-enum class SplitAxis { X, Y };   // X = left|right divider, Y = top|bottom divider
+enum class SplitAxis { X, Y };
 
 struct SplitterState {
     bool hovered = false;

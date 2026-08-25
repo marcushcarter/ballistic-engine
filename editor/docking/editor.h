@@ -17,7 +17,7 @@ struct Editor
 
     std::vector<std::unique_ptr<Panel>> panels;
 
-    float split_x = 0.5f;
+    float split_x = 0.8f;
     float split_y = 0.5f;
     float bar_h = 36.0f;
 

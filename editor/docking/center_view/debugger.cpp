@@ -1,16 +1,17 @@
 #include <editor/docking/center_view/debugger.h>
-
 #include <editor/docking/center_view/output/output.h>
 #include <editor/docking/center_view/profiler/profiler.h>
 #include <editor/docking/center_view/memory/memory.h>
+#include <core/base/error.h>
+#include <cfloat>
 
 namespace ballistic {
 
 void Debugger::initialize()
 {
-    tabs.push_back(std::make_unique<OutputDebugTab>());
     tabs.push_back(std::make_unique<ProfilerDebugTab>());
     tabs.push_back(std::make_unique<MemoryDebugTab>());
+    tabs.push_back(std::make_unique<OutputDebugTab>());
 }
 
 void Debugger::draw_content(EditorContext& ctx)

@@ -20,6 +20,16 @@ void CenterView::_draw_scene(EditorContext& ctx)
     if (!ImGui::IsAnyItemActive()) {
         ctx.renderer->request_size((uint32_t)size.x, (uint32_t)size.y);
     }
+
+    if (!source_resolved) {
+        for (const auto& [id, name] : ctx.renderer->graph.debug_names) {
+            if (name == "Out_Color") {
+                selected_name_id = id;
+                source_resolved = true;
+                break;
+            }
+        }
+    }
     
     RenderGraph::ImageResource* sel = ctx.renderer->graph.image_resource_by_id(selected_name_id);
     VkImageView sel_view = (sel && sel->image) ? sel->image->image_view : VK_NULL_HANDLE;
@@ -32,37 +42,37 @@ void CenterView::_draw_scene(EditorContext& ctx)
         dl->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(25, 25, 25, 255));
     }
 
-    const float margin = 8.0f;
-    ImVec2 button_size = ImVec2(24, 24);
-    ImVec2 button_pos = ImVec2(ImGui::GetWindowContentRegionMax().x - button_size.x, ImGui::GetWindowContentRegionMin().y + margin);
+    left_overlay.begin(pos, size, OverlayBar::Align::Left);
+    if (left_overlay.button(ICON_FA_BARS)) {}
+    if (left_overlay.button(ICON_FA_CUBE " Perspective")) {}
+    if (left_overlay.button(ICON_FA_ADDRESS_BOOK " Lit")) {}
+    if (left_overlay.button("Show")) {}
+    left_overlay.end();
 
-    ImGui::SetCursorPos(button_pos);
-    if (ImGui::Button(ICON_FA_ELLIPSIS, button_size)) {
-        ImGui::OpenPopup("##viewport_source");
+    const char* src_label = "(no source)";
+    if (selected_name_id != 0) {
+        auto it = ctx.renderer->graph.debug_names.find(selected_name_id);
+        if (it != ctx.renderer->graph.debug_names.end()) src_label = it->second.c_str();
     }
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-    if (ImGui::BeginPopup("##viewport_source")) {
-        if (ImGui::Selectable("Final Output", selected_name_id == 0)) selected_name_id = 0;
-        ImGui::Separator();
-
+    // static bool gizmo_rotate = false, gizmo_move = false;
+    right_overlay.begin(pos, size, OverlayBar::Align::Right);
+    if (right_overlay.combo("##viewport_source", src_label, 160.0f)) {
         bool any = false;
         for (const RenderGraph::ImageResource& r : ctx.renderer->graph.image_resources) {
-            if (r.image->state.layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL || !r.image) continue;
+            if (!r.image || r.image->state.layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) continue;
             if (r.image_create_info.sizing != drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::ViewportRelative) continue;
-
             any = true;
             const std::string& name = ctx.renderer->graph.debug_names[r.name_id];
-            bool is_selected = (r.name_id == selected_name_id);
-            if (ImGui::Selectable(name.c_str(), is_selected)) selected_name_id = r.name_id;
+            if (ImGui::Selectable(name.c_str(), r.name_id == selected_name_id)) selected_name_id = r.name_id;
         }
         if (!any) ImGui::TextDisabled("(no inspectable resources)");
-        
-        ImGui::Text("%llu", selected_name_id);
 
-        ImGui::EndPopup();
+        ImGui::EndCombo();
     }
-    ImGui::PopStyleVar();
+    // right_overlay.toggle(ICON_FA_ARROWS_ROTATE "##rot", gizmo_rotate, ImVec2(24,24));
+    // right_overlay.toggle(ICON_FA_UP_DOWN_LEFT_RIGHT "##mov", gizmo_move, ImVec2(24,24));
+    right_overlay.end();
 }
 
 void CenterView::draw(EditorContext& ctx)

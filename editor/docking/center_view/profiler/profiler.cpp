@@ -12,10 +12,10 @@ void ProfilerDebugTab::draw(EditorContext& ctx)
 
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
-    const float right_width = avail.x * 0.20f;
+    const float right_width = avail.x * 0.2f;
     const float leftWidth = avail.x - right_width - ImGui::GetStyle().ItemSpacing.x;
 
-    const float topHeight = avail.y / 3.0f;
+    const float topHeight = avail.y / 2.0f;
     const float bottomHeight = avail.y - topHeight - ImGui::GetStyle().ItemSpacing.y;
 
     ImGui::BeginGroup();
