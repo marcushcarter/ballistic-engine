@@ -15,6 +15,7 @@ struct EditorResources;
 struct AssetImportTracker;
 struct PopupManager;
 struct ProjectManager;
+struct AssetManager;
 struct Editor;
 
 struct EditorContext
@@ -31,6 +32,7 @@ struct EditorContext
     AssetImportTracker* imports = nullptr;
     
     ProjectManager* project_manager = nullptr;
+    AssetManager* asset_manager = nullptr;
     Editor* editor = nullptr;
     PopupManager* popups = nullptr;
         

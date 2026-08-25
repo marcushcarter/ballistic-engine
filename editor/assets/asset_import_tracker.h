@@ -14,7 +14,7 @@ struct Project;
 
 struct ImportControl {
     std::atomic<float> progress{ 0.0f };
-    std::atomic<bool>  cancel{ false };
+    std::atomic<bool> cancel{ false };
 };
 
 struct AssetImportTracker

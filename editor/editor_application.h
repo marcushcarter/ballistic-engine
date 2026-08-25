@@ -2,7 +2,8 @@
 #pragma once
 #include <core/application/application.h>
 #include <editor/docking/editor.h>
-#include <editor/editor_mode/project_manager.h>
+#include <editor/project_manager/project_manager.h>
+#include <editor/asset_manager/asset_manager.h>
 #include <editor/editor_settings.h>
 #include <editor/editor_resources.h>
 #include <editor/assets/asset_import_tracker.h>
@@ -16,6 +17,7 @@ namespace ballistic {
 struct EditorApplication : Application
 {
     ProjectManager project_manager;
+    AssetManager asset_manager;
     Editor editor;
     PopupManager popups;
 
@@ -23,12 +25,13 @@ struct EditorApplication : Application
     EditorResources resources;
     AssetImportTracker imports;
 
-    std::vector<std::string> titlebar_tabs { "Level", "Text Editor", "Particles" };
-    int titlebar_active_tab = 0;
+    int active_tab = 0;
+    int pending_tab = -1;
+    std::vector<std::string> scene_tabs { "Scene" };
 
     Error on_init() override;
-    void on_update(float p_dt) override;
     void on_shutdown() override;
+    void on_update(float p_dt) override;
 
     Error open_project(const std::filesystem::path& p_root);
     void close_project();
@@ -36,8 +39,27 @@ struct EditorApplication : Application
     void _load_state();
     void _save_state();
 
+    struct TitlebarLayout {
+        ImVec2 origin;
+        float width  = 0;
+        float menu_h = 0;
+        float bar_h = 0;
+        float tab_h = 0;
+        float btn_w = 0;
+        float logo = 0;
+    };
+
     void _draw_titlebar();
-    void _draw_shared_menu_items();
+    
+    void _titlebar_menus(const TitlebarLayout& L);
+    void _titlebar_caption_buttons(const TitlebarLayout& L);
+    void _titlebar_tabs(const TitlebarLayout& L);
+    void _titlebar_cog(const TitlebarLayout& L);
+    void _titlebar_logo(const TitlebarLayout& L);
+    void _titlebar_block(const TitlebarLayout& L, ImVec2 min, ImVec2 max);
+    
+    void _titlebar_help_menu();
+    void _titlebar_editor_menu();
 
     EditorContext _make_context();
 

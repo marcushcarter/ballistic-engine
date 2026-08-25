@@ -1,4 +1,4 @@
-#include <editor/editor_mode/project_manager.h>
+#include <editor/project_manager/project_manager.h>
 #include <editor/popup/popup_manager.h>
 #include <editor/popup/project/delete_project.h>
 #include <drivers/toml/toml_helpers.h>

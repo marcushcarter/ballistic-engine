@@ -67,6 +67,8 @@ Error EditorApplication::on_init()
 
     err = project_manager.initialize();
     BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    err = asset_manager.initialize();
+    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
     err = editor.initialize();
     BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
 
@@ -74,28 +76,6 @@ Error EditorApplication::on_init()
     settings.theme.apply();
 
     return Ok;
-}
-
-void EditorApplication::on_update(float p_dt)
-{
-    _draw_titlebar();
-
-    EditorContext ctx = _make_context();
-    
-    popups.draw(ctx);
-    if (project.loaded()) {
-        
-        imports.tick();
-        for (const auto& c : imports.completed) {
-            renderer.textures.unload(c.guid);
-            renderer.textures.load(c.guid, c.content_bin);
-        }
-        imports.completed.clear();
-
-        editor.on_update(ctx, p_dt);
-    } else {
-        project_manager.on_update(ctx);
-    }
 }
 
 void EditorApplication::on_shutdown()
@@ -106,7 +86,31 @@ void EditorApplication::on_shutdown()
     project_manager.save_recents();
 
     project_manager.shutdown();
+    asset_manager.shutdown();
     editor.shutdown();
+}
+
+void EditorApplication::on_update(float p_dt)
+{
+    _draw_titlebar();
+
+    EditorContext ctx = _make_context();
+    
+    popups.draw(ctx);
+    if (project.loaded()) {
+        imports.tick();
+        for (const auto& c : imports.completed) {
+            renderer.textures.unload(c.guid);
+            renderer.textures.load(c.guid, c.content_bin);
+        }
+        imports.completed.clear();
+
+        if (active_tab == 0) asset_manager.on_update(ctx);
+        else editor.on_update(ctx, p_dt);
+
+    } else {
+        project_manager.on_update(ctx);
+    }
 }
 
 Error EditorApplication::open_project(const std::filesystem::path& p_root)
@@ -118,6 +122,9 @@ Error EditorApplication::open_project(const std::filesystem::path& p_root)
 
     render_path_request(new EditorRenderPath());
     project_manager.add_recent(project.root, project.name);
+
+    active_tab = scene_tabs.empty() ? 0 : 1;
+    pending_tab = active_tab;
 
     return Ok;
 }
@@ -224,17 +231,25 @@ void EditorApplication::_save_state()
     out << root << '\n';
 }
 
+void EditorApplication::_titlebar_block(const TitlebarLayout& L, ImVec2 min, ImVec2 max)
+{
+    win32.window_titlebar_add_rect(
+        (long)(min.x - L.origin.x), (long)(min.y - L.origin.y),
+        (long)(max.x - L.origin.x), (long)(max.y - L.origin.y)
+    );
+}
+
 void EditorApplication::_draw_titlebar()
 {
     const float TAB_H = 24.0f;
     const float BTN_W = 46.0f;
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 7));
 
+    const bool  show_tabs = project.loaded();
     const float MENU_H = ImGui::GetFrameHeight();
     const float H = MENU_H + TAB_H;
-    const float LOGO = H;
-    
+
     ImGuiWindowFlags flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     if (!ImGui::BeginViewportSideBar("##BallisticTitlebar", ImGui::GetMainViewport(), ImGuiDir_Up, H, flags)) {
         ImGui::PopStyleVar();
@@ -242,177 +257,214 @@ void EditorApplication::_draw_titlebar()
         return;
     }
 
-    const ImVec2 origin = ImGui::GetWindowPos();
-    const float width = ImGui::GetWindowWidth();
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImDrawList* fg = ImGui::GetForegroundDrawList();
+    TitlebarLayout L;
+    L.origin = ImGui::GetWindowPos();
+    L.width = ImGui::GetWindowWidth();
+    L.menu_h = MENU_H;
+    L.bar_h = H;
+    L.tab_h = TAB_H;
+    L.btn_w = BTN_W;
+    L.logo = H;
 
     win32.window_titlebar_reset((int)H);
-    auto blocker = [&](ImVec2 mn, ImVec2 mx) {
-        win32.window_titlebar_add_rect((long)(mn.x - origin.x), (long)(mn.y - origin.y), (long)(mx.x - origin.x), (long)(mx.y - origin.y));
-    };
 
-    if (ImGui::BeginMenuBar()) {
-        
-        ImGui::SetCursorPosX(LOGO + 6.0f);
-        float menu_x0 = ImGui::GetCursorScreenPos().x;
+    const float width = ImGui::GetWindowWidth();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(ImVec2(L.origin.x, L.origin.y + L.menu_h), ImVec2(L.origin.x + width, L.origin.y + H), ImGui::GetColorU32(ImGuiCol_MenuBarBg)); 
 
-        if (project.loaded()) _draw_shared_menu_items();
-        
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("Online Documentation")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-            if (ImGui::MenuItem("Forum")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-            if (ImGui::MenuItem("Community")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Copy System Info")) {
-                const auto sys = win32.get_system_info();
-                const auto gpu = dd.gpu_describe();
-                char buf[1024];
-                std::snprintf(buf, sizeof(buf),
-                    "Ballistic v%d.%d.%d\n"
-                    "OS:       %s (build %u)\n"
-                    "Renderer: Vulkan %s (Deferred+)\n"
-                    "GPU:      %s [%s]\n"
-                    "          %s (%s)\n"
-                    "          %.2f GiB VRAM\n"
-                    "CPU:      %s\n"
-                    "          %u cores / %u threads @ %u MHz\n"
-                    "RAM:      %.2f GiB\n"
-                    "Display:  %d monitor%s\n"
-                    "Audio:    nah\n"
-                    "Physics:  nah\n",
-                    BALLISTIC_VERSION_MAJOR, BALLISTIC_VERSION_MINOR, BALLISTIC_VERSION_PATCH,
-                    sys.os_name.c_str(), sys.os_build,
-                    gpu.api_version.c_str(),
-                    gpu.name.c_str(), gpu.type.c_str(),
-                    gpu.driver_name.c_str(), gpu.driver_id.c_str(),
-                    static_cast<double>(gpu.vram_bytes) / (1024.0 * 1024.0 * 1024.0),
-                    sys.cpu_brand.c_str(),
-                    sys.cpu_cores, sys.cpu_threads, sys.cpu_mhz,
-                    static_cast<double>(sys.ram_total_bytes) / (1024.0 * 1024.0 * 1024.0),
-                    sys.monitor_count, sys.monitor_count == 1 ? "" : "s"
-                );
-                ImGui::SetClipboardText(buf);
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("About Ballistic")) popups.open("About Ballistic");
-            if (ImGui::MenuItem("Support Development")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-            ImGui::EndMenu();
-        }
-
-        float menu_x1 = ImGui::GetCursorScreenPos().x;
-        if (menu_x1 > menu_x0) blocker(ImVec2(menu_x0, origin.y), ImVec2(menu_x1, origin.y + MENU_H));
-
-        const std::string& title = project.name.empty() ? std::string("Ballistic Editor") : project.name;
-        ImVec2 ts = ImGui::CalcTextSize(title.c_str());
-        float btns_x = origin.x + width - BTN_W * 3.0f;
-        float right_pad = win32.window.custom_titlebar ? (width - BTN_W * 3.0f) : width;
-        float title_x = origin.x + right_pad - ts.x - 16.0f;
-        dl->AddText(ImVec2(title_x, origin.y + (MENU_H - ts.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
-        
-        if (win32.window.custom_titlebar) {
-            float cluster_x = btns_x;
-            float cluster_w = BTN_W * 3.0f;
-            fg->AddRectFilled(ImVec2(cluster_x, origin.y), ImVec2(cluster_x + cluster_w, origin.y + MENU_H), ImGui::GetColorU32(ImGuiCol_MenuBarBg));
-
-            RECT rmin, rmax, rclose;
-            auto client_rect = [&](float x0) -> RECT {
-                return RECT{ (long)(x0 - origin.x), (long)(origin.y - origin.y), (long)(x0 + BTN_W - origin.x), (long)(origin.y + MENU_H - origin.y) };
-            };
-
-            ImVec2 mouse = ImGui::GetIO().MousePos;
-            auto ctrl = [&](float x0, int glyph, bool danger) {
-                ImVec2 p(x0, origin.y);
-                bool hovered = mouse.x >= x0 && mouse.x < x0 + BTN_W && mouse.y >= origin.y && mouse.y < origin.y + MENU_H;
-                if (hovered) fg->AddRectFilled(p, ImVec2(p.x + BTN_W, p.y + MENU_H), danger ? IM_COL32(196, 43, 28, 255) : ImGui::GetColorU32(ImGuiCol_ButtonHovered));
-                ImVec2 c(p.x + BTN_W * 0.5f, p.y + MENU_H * 0.5f);
-                ImU32 col = ImGui::GetColorU32(ImGuiCol_Text);
-                float s = 5.0f;
-                switch (glyph) {
-                    case 0: fg->AddLine(ImVec2(c.x-s,c.y), ImVec2(c.x+s,c.y), col, 1.0f); break;
-                    case 1: fg->AddRect(ImVec2(c.x-s,c.y-s), ImVec2(c.x+s,c.y+s), col, 0,0,1.0f); break;
-                    case 2:
-                        fg->AddRect(ImVec2(c.x-s+2,c.y-s-2), ImVec2(c.x+s+2,c.y+s-2), col, 0,0,1.0f);
-                        fg->AddRectFilled(ImVec2(c.x-s-2,c.y-s+2), ImVec2(c.x+s-2,c.y+s+2), ImGui::GetColorU32(ImGuiCol_MenuBarBg));
-                        fg->AddRect(ImVec2(c.x-s-2,c.y-s+2), ImVec2(c.x+s-2,c.y+s+2), col, 0,0,1.0f);
-                        break;
-                    case 3:
-                        fg->AddLine(ImVec2(c.x-s,c.y-s), ImVec2(c.x+s,c.y+s), col, 1.2f);
-                        fg->AddLine(ImVec2(c.x-s,c.y+s), ImVec2(c.x+s,c.y-s), col, 1.2f);
-                        break;
-                }
-            };
-
-            float x_min = btns_x;
-            float x_max = btns_x + BTN_W;
-            float x_close = btns_x + BTN_W * 2.0f;
-
-            ctrl(x_min, 0, false);
-            ctrl(x_max, win32.window_is_maximized() ? 2 : 1, false);
-            ctrl(x_close, 3, true);
-
-            rmin = client_rect(x_min);
-            rmax = client_rect(x_max);
-            rclose = client_rect(x_close);
-            win32.window_titlebar_set_controls(rmin, rmax, rclose);
-        }
-
-        ImGui::EndMenuBar();
-    }
-
-    const ImU32 bar_bg = ImGui::GetColorU32(ImGuiCol_MenuBarBg);
-    dl->AddRectFilled(ImVec2(origin.x, origin.y + MENU_H), ImVec2(origin.x + width, origin.y + H), bar_bg); 
-
-    ImGui::SetCursorScreenPos(ImVec2(origin.x + LOGO + 6.0f, origin.y + MENU_H));
-    const float TAB_PAD_Y = (TAB_H - ImGui::GetFontSize()) * 0.5f;
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(14, TAB_PAD_Y));
-    ImGui::PushStyleVar(ImGuiStyleVar_TabRounding, 4.0f);
-    if (ImGui::BeginTabBar("##TitlebarTabs", ImGuiTabBarFlags_AutoSelectNewTabs)) {
-        for (int i = 0; i < (int)titlebar_tabs.size(); ++i) {
-            ImGui::PushID(i);
-            bool selected = ImGui::BeginTabItem(titlebar_tabs[i].c_str());
-            blocker(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-            if (selected) { titlebar_active_tab = i; ImGui::EndTabItem(); }
-            ImGui::PopID();
-        }
-        ImGui::EndTabBar();
-    }
-    ImGui::PopStyleVar(2);
-
-    {
-        const char* cog = ICON_FA_GEAR;
-        ImVec2 cog_sz = ImGui::CalcTextSize(cog);
-        float pad = 12.0f;
-        float box = TAB_H;
-        ImVec2 cog_pos(origin.x + width - pad - box, origin.y + MENU_H);
-
-        ImGui::SetCursorScreenPos(cog_pos);
-        ImGui::InvisibleButton("##settings_cog", ImVec2(box, box));
-        blocker(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-
-        bool hovered = ImGui::IsItemHovered();
-        if (ImGui::IsItemClicked()) popups.open("Editor Settings");
-
-        ImU32 col = hovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-        dl->AddText(ImVec2(cog_pos.x + (box - cog_sz.x) * 0.5f, cog_pos.y + (box - cog_sz.y) * 0.5f), col, cog);
-    }
-
-    {
-        VkDescriptorSet logo_set = imgui.texture_cache.get(resources.icon_image.image_view);
-        dl->PushClipRect(origin, ImVec2(origin.x + width, origin.y + H), false);
-        float m = 6.0f;
-        ImVec2 mn(origin.x + m, origin.y + m);
-        ImVec2 mx(origin.x + LOGO - m, origin.y + H - m);
-        if (logo_set) dl->AddImage(logo_set, mn, mx);
-        else dl->AddRectFilled(mn, mx, ImGui::GetColorU32(ImGuiCol_Text), 4.0f);
-        dl->PopClipRect();
-    }
+    _titlebar_menus(L);
+    if (show_tabs) _titlebar_tabs(L);
+    _titlebar_cog(L);
+    _titlebar_logo(L);
 
     ImGui::End();
     ImGui::PopStyleVar();
 }
 
-void EditorApplication::_draw_shared_menu_items()
+void EditorApplication::_titlebar_menus(const TitlebarLayout& L)
+{
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    if (!ImGui::BeginMenuBar()) return;
+        
+    ImGui::SetCursorPosX(L.logo + 6.0f);
+    float menu_x0 = ImGui::GetCursorScreenPos().x;
+
+    if (project.loaded()) _titlebar_editor_menu();
+    _titlebar_help_menu();
+
+    float menu_x1 = ImGui::GetCursorScreenPos().x;
+    if (menu_x1 > menu_x0) _titlebar_block(L, ImVec2(menu_x0, L.origin.y), ImVec2(menu_x1, L.origin.y + L.menu_h));
+
+    const std::string& title = project.name.empty() ? std::string("Ballistic Editor") : project.name;
+    ImVec2 ts = ImGui::CalcTextSize(title.c_str());
+    float right_pad = win32.window.custom_titlebar ? (L.width - L.btn_w * 3.0f) : L.width;
+    float title_x = L.origin.x + right_pad - ts.x - 16.0f;
+    dl->AddText(ImVec2(title_x, L.origin.y + (L.menu_h - ts.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
+    
+    if (win32.window.custom_titlebar) _titlebar_caption_buttons(L);
+
+    ImGui::EndMenuBar();
+}
+
+void EditorApplication::_titlebar_caption_buttons(const TitlebarLayout& L)
+{
+    ImDrawList* fg = ImGui::GetForegroundDrawList();
+
+    const float btns_x = L.origin.x + L.width - L.btn_w * 3.0f;
+    fg->AddRectFilled(ImVec2(btns_x, L.origin.y), ImVec2(btns_x + L.btn_w * 3.0f, L.origin.y + L.menu_h), ImGui::GetColorU32(ImGuiCol_MenuBarBg));
+
+    RECT rmin, rmax, rclose;
+    auto client_rect = [&](float x0) -> RECT {
+        return RECT{ (long)(x0 - L.origin.x), (long)(L.origin.y - L.origin.y), (long)(x0 + L.btn_w - L.origin.x), (long)(L.origin.y + L.menu_h - L.origin.y) };
+    };
+
+    ImVec2 mouse = ImGui::GetIO().MousePos;
+    auto ctrl = [&](float x0, int glyph, bool danger) {
+        ImVec2 p(x0, L.origin.y);
+        bool hovered = mouse.x >= x0 && mouse.x < x0 + L.btn_w && mouse.y >= L.origin.y && mouse.y < L.origin.y + L.menu_h;
+        if (hovered) fg->AddRectFilled(p, ImVec2(p.x + L.btn_w, p.y + L.menu_h), danger ? IM_COL32(196, 43, 28, 255) : ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+        ImVec2 c(p.x + L.btn_w * 0.5f, p.y + L.menu_h * 0.5f);
+        ImU32 col = ImGui::GetColorU32(ImGuiCol_Text);
+        float s = 5.0f;
+        switch (glyph) {
+            case 0: fg->AddLine(ImVec2(c.x-s,c.y), ImVec2(c.x+s,c.y), col, 1.0f); break;
+            case 1: fg->AddRect(ImVec2(c.x-s,c.y-s), ImVec2(c.x+s,c.y+s), col, 0,0,1.0f); break;
+            case 2:
+                fg->AddRect(ImVec2(c.x-s+2,c.y-s-2), ImVec2(c.x+s+2,c.y+s-2), col, 0,0,1.0f);
+                fg->AddRectFilled(ImVec2(c.x-s-2,c.y-s+2), ImVec2(c.x+s-2,c.y+s+2), ImGui::GetColorU32(ImGuiCol_MenuBarBg));
+                fg->AddRect(ImVec2(c.x-s-2,c.y-s+2), ImVec2(c.x+s-2,c.y+s+2), col, 0,0,1.0f);
+                break;
+            case 3:
+                fg->AddLine(ImVec2(c.x-s,c.y-s), ImVec2(c.x+s,c.y+s), col, 1.2f);
+                fg->AddLine(ImVec2(c.x-s,c.y+s), ImVec2(c.x+s,c.y-s), col, 1.2f);
+                break;
+        }
+    };
+
+    float x_min = btns_x;
+    float x_max = btns_x + L.btn_w;
+    float x_close = btns_x + L.btn_w * 2.0f;
+
+    ctrl(x_min, 0, false);
+    ctrl(x_max, win32.window_is_maximized() ? 2 : 1, false);
+    ctrl(x_close, 3, true);
+
+    rmin = client_rect(x_min);
+    rmax = client_rect(x_max);
+    rclose = client_rect(x_close);
+    win32.window_titlebar_set_controls(rmin, rmax, rclose);
+}
+
+void EditorApplication::_titlebar_tabs(const TitlebarLayout& L)
+{
+    ImGui::SetCursorScreenPos(ImVec2(L.origin.x + L.logo + 6.0f, L.origin.y + L.menu_h));
+    const float TAB_PAD_Y = (L.tab_h - ImGui::GetFontSize()) * 0.5f;
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(14, TAB_PAD_Y));
+    ImGui::PushStyleVar(ImGuiStyleVar_TabRounding, 4.0f);
+
+    if (ImGui::BeginTabBar("##TitlebarTabs", ImGuiTabBarFlags_AutoSelectNewTabs)) {
+        auto flags = [&](int idx) -> ImGuiTabItemFlags {
+            return pending_tab == idx ? ImGuiTabItemFlags_SetSelected : 0;
+        };
+
+        ImGui::PushID(0);
+        if (ImGui::BeginTabItem("Asset Manager", nullptr, flags(0))) { active_tab = 0; ImGui::EndTabItem(); }
+        _titlebar_block(L, ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+        ImGui::PopID();
+
+        for (int i = 0; i < (int)scene_tabs.size(); ++i) {
+            ImGui::PushID(i + 1);
+            if (ImGui::BeginTabItem(scene_tabs[i].c_str(), nullptr, flags(i + 1))) { active_tab = i + 1; ImGui::EndTabItem(); }
+            _titlebar_block(L, ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+            ImGui::PopID();
+        }
+        ImGui::EndTabBar();
+    }
+    pending_tab = -1;
+    ImGui::PopStyleVar(2);
+}
+
+void EditorApplication::_titlebar_cog(const TitlebarLayout& L)
+{    
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    const char* cog = ICON_FA_GEAR;
+    ImVec2 cog_sz = ImGui::CalcTextSize(cog);
+    float pad = 12.0f;
+    float box = L.tab_h;
+    ImVec2 cog_pos(L.origin.x + L.width - pad - box, L.origin.y + L.menu_h);
+
+    ImGui::SetCursorScreenPos(cog_pos);
+    ImGui::InvisibleButton("##settings_cog", ImVec2(box, box));
+    { ImVec2 mn = ImGui::GetItemRectMin(), mx = ImGui::GetItemRectMax(); _titlebar_block(L, mn, mx); }
+
+    bool hovered = ImGui::IsItemHovered();
+    if (ImGui::IsItemClicked()) popups.open("Editor Settings");
+
+    ImU32 col = hovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+    dl->AddText(ImVec2(cog_pos.x + (box - cog_sz.x) * 0.5f, cog_pos.y + (box - cog_sz.y) * 0.5f), col, cog);
+}
+
+void EditorApplication::_titlebar_logo(const TitlebarLayout& L)
+{
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    VkDescriptorSet logo_set = imgui.texture_cache.get(resources.icon_image.image_view);
+    dl->PushClipRect(L.origin, ImVec2(L.origin.x + L.width, L.origin.y + L.bar_h), false);
+    float m = 6.0f;
+    ImVec2 mn(L.origin.x + m, L.origin.y + m);
+    ImVec2 mx(L.origin.x + L.logo - m, L.origin.y + L.bar_h - m);
+    if (logo_set) dl->AddImage(logo_set, mn, mx);
+    else dl->AddRectFilled(mn, mx, ImGui::GetColorU32(ImGuiCol_Text), 4.0f);
+    dl->PopClipRect();
+}
+
+void EditorApplication::_titlebar_help_menu()
+{
+    if (ImGui::BeginMenu("Help")) {
+        if (ImGui::MenuItem("Online Documentation")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("Forum")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("Community")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Copy System Info")) {
+            const auto sys = win32.get_system_info();
+            const auto gpu = dd.gpu_describe();
+            char buf[1024];
+            std::snprintf(buf, sizeof(buf),
+                "Ballistic v%d.%d.%d\n"
+                "OS:       %s (build %u)\n"
+                "Renderer: Vulkan %s (Deferred+)\n"
+                "GPU:      %s [%s]\n"
+                "          %s (%s)\n"
+                "          %.2f GiB VRAM\n"
+                "CPU:      %s\n"
+                "          %u cores / %u threads @ %u MHz\n"
+                "RAM:      %.2f GiB\n"
+                "Display:  %d monitor%s\n"
+                "Audio:    nah\n"
+                "Physics:  nah\n",
+                BALLISTIC_VERSION_MAJOR, BALLISTIC_VERSION_MINOR, BALLISTIC_VERSION_PATCH,
+                sys.os_name.c_str(), sys.os_build,
+                gpu.api_version.c_str(),
+                gpu.name.c_str(), gpu.type.c_str(),
+                gpu.driver_name.c_str(), gpu.driver_id.c_str(),
+                static_cast<double>(gpu.vram_bytes) / (1024.0 * 1024.0 * 1024.0),
+                sys.cpu_brand.c_str(),
+                sys.cpu_cores, sys.cpu_threads, sys.cpu_mhz,
+                static_cast<double>(sys.ram_total_bytes) / (1024.0 * 1024.0 * 1024.0),
+                sys.monitor_count, sys.monitor_count == 1 ? "" : "s"
+            );
+            ImGui::SetClipboardText(buf);
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("About Ballistic")) popups.open("About Ballistic");
+        if (ImGui::MenuItem("Support Development")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        ImGui::EndMenu();
+    }
+}
+
+void EditorApplication::_titlebar_editor_menu()
 {
     if (ImGui::BeginMenu("File")) {
         // search bar
@@ -437,11 +489,6 @@ void EditorApplication::_draw_shared_menu_items()
         
         // if (ImGui::MenuItem("Import Into Scene")) {}
         // if (ImGui::MenuItem("Export All")) {}
-        
-        // if (ImGui::MenuItem("Take Screenshot", "Ctrl+F12")) {   
-        //     EditorRenderPath* path = static_cast<EditorRenderPath*>(render_path);
-        //     path->screenshot.requested = true;
-        // }
 
         ImGui::Separator();
         
@@ -505,6 +552,11 @@ void EditorApplication::_draw_shared_menu_items()
 
         // if (ImGui::MenuItem("Enable Fullscreen", "Alt+F11")) {}
         
+        if (ImGui::MenuItem("Take Screenshot", "Ctrl+F12")) {   
+            EditorRenderPath* path = static_cast<EditorRenderPath*>(render_path);
+            path->screenshot.requested = true;
+        }
+        
         ImGui::Separator();
         
         ImGui::EndMenu();
@@ -557,6 +609,7 @@ EditorContext EditorApplication::_make_context()
     ctx.imports = &imports;
     
     ctx.project_manager = &project_manager;
+    ctx.asset_manager = &asset_manager;
     ctx.editor = &editor;
     ctx.popups = &popups;
 

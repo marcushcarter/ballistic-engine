@@ -1,5 +1,5 @@
 #include <editor/popup/project/new_project.h>
-#include <editor/editor_mode/project_manager.h>
+#include <editor/project_manager/project_manager.h>
 #include <drivers/windows/dialogs_win32.h>
 #include <core/project/project.h>
 #include <core/io/path.h>
