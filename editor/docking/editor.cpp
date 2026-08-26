@@ -4,6 +4,7 @@
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <IconsFontAwesome6.h>
 
 namespace ballistic {
 
@@ -25,7 +26,9 @@ void Editor::shutdown()
 
 void Editor::_draw_toolbar(EditorContext&)
 {
-    // ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
+
+    ImGui::Button(ICON_FA_HARD_DRIVE);
 
     // if (ImGui::Button(ICON_FA_PLAY)) {}
     // ImGui::SameLine();
@@ -39,7 +42,7 @@ void Editor::_draw_toolbar(EditorContext&)
     //             (int)right_top.panels.size(),
     //             (int)right_bottom.panels.size());
 
-    // ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
 }
 
 void Editor::on_update(EditorContext& ctx, float)

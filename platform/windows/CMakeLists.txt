@@ -36,10 +36,11 @@ if(BALLISTIC_BUILD_CONSOLE_WRAPPER)
 endif()
 
 if(BALLISTIC_BUILD_GAME)
-    add_executable(ballistic_game # WIN32
+    add_executable(ballistic_game WIN32
         ballistic_res_app.rc
         ${BALLISTIC_SHARED_ASSETS}
-        main2.cpp # ${BALLISTIC_MAIN} 
+        # main2.cpp
+        ${BALLISTIC_MAIN} 
         ${CMAKE_SOURCE_DIR}/game/game_application.cpp
     )
     target_link_libraries(ballistic_game PRIVATE ballistic_core)

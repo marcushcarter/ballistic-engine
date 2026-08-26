@@ -3,6 +3,11 @@
 #include <shlobj.h>
 #include <shellapi.h>
 
+// #include <string>
+// #include <vector>
+// #include <algorithm>
+// #include <system_error>
+
 namespace ballistic {
 
 static std::filesystem::path _known_folder(const KNOWNFOLDERID& p_id, std::wstring_view p_subpath)
@@ -29,7 +34,6 @@ std::filesystem::path Paths::roaming_data(std::wstring_view p_subpath) { return 
 
 std::filesystem::path Paths::shader_cache() { return local_data(L"shader_cache"); }
 std::filesystem::path Paths::pipeline_cache() { return local_data(L"pipeline_cache"); }
-
 std::filesystem::path Paths::screenshots() { return roaming_data(L"screenshots"); }
 
 std::filesystem::path Paths::executable_dir()
@@ -118,12 +122,26 @@ void Paths::remove_to_recycle(const std::filesystem::path& p_path)
     if (needs_uninit) CoUninitialize();
 }
 
-bool Paths::is_under(const std::filesystem::path& p, const std::filesystem::path& base)
+bool Paths::is_under(const std::filesystem::path& p_path, const std::filesystem::path& p_base)
 {
-    auto pb = p.begin();
-    auto bb = base.begin();
-    for (; bb != base.end(); ++bb, ++pb) if (pb == p.end() || *pb != *bb) return false;
+    auto pb = p_path.begin();
+    auto bb = p_base.begin();
+    for (; bb != p_base.end(); ++bb, ++pb) if (pb == p_path.end() || *pb != *bb) return false;
     return true;
+}
+
+bool Paths::has_subdir(const std::filesystem::path& p_path)
+{
+    std::error_code ec;
+    for (const auto& e : std::filesystem::directory_iterator(p_path, ec)) if (e.is_directory(ec)) return true;
+    return false;
+}
+
+void Paths::gather_subdirs(const std::filesystem::path& p_path, std::vector<std::filesystem::path>& p_out)
+{
+    std::error_code ec;
+    for (const auto& e : std::filesystem::directory_iterator(p_path, ec)) if (e.is_directory(ec)) p_out.push_back(e.path());
+    std::sort(p_out.begin(), p_out.end());
 }
 
 };

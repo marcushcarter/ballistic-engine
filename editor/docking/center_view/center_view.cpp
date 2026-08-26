@@ -36,7 +36,7 @@ void CenterView::_draw_scene(EditorContext& ctx)
     VkDescriptorSet set = ctx.imgui->texture_cache.get(sel_view);
 
     if (set) {
-        ImGui::Image((ImTextureID)set, size);
+        ImGui::Image((ImTextureID)set, size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
     } else {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(25, 25, 25, 255));

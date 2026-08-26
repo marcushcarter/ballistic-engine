@@ -53,6 +53,7 @@ Error EditorApplication::on_init()
         ImFontConfig fa_cfg;
         fa_cfg.MergeMode = true;
         fa_cfg.PixelSnapH = true;
+        fa_cfg.GlyphOffset.y = 1.0f;
         fa_cfg.FontDataOwnedByAtlas = false;
         io.Fonts->AddFontFromMemoryTTF((void*)fa.data, (int)fa.size, 14.0f, &fa_cfg, fa_ranges);
         io.Fonts->Build();

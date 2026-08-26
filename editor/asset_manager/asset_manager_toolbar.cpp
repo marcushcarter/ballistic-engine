@@ -46,31 +46,6 @@ void AssetBrowserToolbar::_breadcrumb(const std::filesystem::path& root, std::fi
     ImGui::PopStyleColor();
 }
 
-void AssetBrowserToolbar::draw_sidebar(const std::filesystem::path& root, std::filesystem::path& selected)
-{
-    if (!std::filesystem::exists(root)) return;
-
-    std::vector<std::filesystem::path> folders;
-    std::error_code ec;
-    for (const auto& entry : std::filesystem::directory_iterator(root, ec)) if (entry.is_directory()) folders.push_back(entry.path());
-    std::sort(folders.begin(), folders.end());
-
-    for (const auto& folder : folders) {
-        ImGui::PushID(folder.string().c_str());
-
-        const std::string label = std::string(ICON_FA_FOLDER "  ") + folder.filename().string();
-        const bool active = Paths::is_under(selected, folder);
-        if (ImGui::Selectable(label.c_str(), active)) selected = folder;
-
-        if (ImGui::BeginDragDropTarget()) {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_PATH")) Paths::move((const char*)payload->Data, folder);
-            ImGui::EndDragDropTarget();
-        }
-
-        ImGui::PopID();
-    }
-}
-
 void AssetBrowserToolbar::draw_header(EditorContext& ctx, const std::filesystem::path& root, std::filesystem::path& selected, char* search_buf, size_t search_cap)
 {
     ImGui::BeginDisabled(!(!selected.empty() && selected != root));

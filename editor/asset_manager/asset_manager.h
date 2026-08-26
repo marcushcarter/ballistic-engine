@@ -1,6 +1,9 @@
 #pragma once
 #include <editor/asset_manager/asset_manager_grid.h>
 #include <editor/asset_manager/asset_manager_toolbar.h>
+
+#include <editor/asset_manager/asset_manager_list.h>
+
 #include <editor/editor_context.h>
 #include <core/base/error.h>
 #include <imgui.h>
@@ -17,12 +20,13 @@ struct AssetManager
     AssetBrowserGrid grid;
     AssetBrowserToolbar toolbar;
 
+    AssetManagerList list;
+
     Error initialize();
     void shutdown();
 
+    void _draw_folder_node(const std::filesystem::path& dir, std::filesystem::path& selected, int depth);
     void on_update(EditorContext& ctx);
-
-    void _draw_divider_shadow(const ImVec2& region_p0, float region_h, float left_w);
 };
     
 }
