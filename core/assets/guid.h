@@ -7,7 +7,7 @@
 #include <functional>
 #include <compare>
 
-namespace ballistic {
+namespace lumen {
 
 struct Guid
 {
@@ -55,8 +55,8 @@ struct GuidEq {
 }
 
 template<>
-struct std::hash<ballistic::Guid> {
-    size_t operator()(ballistic::Guid p_guid) const noexcept {
+struct std::hash<lumen::Guid> {
+    size_t operator()(lumen::Guid p_guid) const noexcept {
         return (size_t)p_guid.value;
     }
 };

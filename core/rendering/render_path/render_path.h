@@ -5,7 +5,7 @@
 #include <core/base/error.h>
 #include <span>
 
-namespace ballistic {
+namespace lumen {
 
 struct RenderPath
 {

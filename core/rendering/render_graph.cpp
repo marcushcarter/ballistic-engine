@@ -1,7 +1,7 @@
 #include <core/rendering/render_graph.h>
 #include <unordered_set>
 
-namespace ballistic {
+namespace lumen {
 
 /***************/
 /**** SETUP ****/

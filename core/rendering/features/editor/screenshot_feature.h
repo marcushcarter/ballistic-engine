@@ -4,7 +4,7 @@
 #include <future>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 struct ScreenshotFeature : Feature
 {    

@@ -5,7 +5,7 @@
 #include <memory>
 #include <string_view>
 
-namespace ballistic {
+namespace lumen {
 
 struct PopupManager
 {

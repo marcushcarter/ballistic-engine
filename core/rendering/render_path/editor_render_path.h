@@ -3,7 +3,7 @@
 #include <core/rendering/features/editor/imgui_feature.h>
 #include <core/rendering/features/editor/screenshot_feature.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct EditorRenderPath : SceneRenderPath
 {

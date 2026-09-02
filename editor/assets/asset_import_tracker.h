@@ -8,7 +8,7 @@
 #include <atomic>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct Project;
 

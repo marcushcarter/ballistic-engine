@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string>
 
-namespace ballistic {
+namespace lumen {
 
 static std::string lower_ext(const std::filesystem::path& p)
 {

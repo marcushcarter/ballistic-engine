@@ -9,7 +9,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 struct RenderGraph
 {

@@ -7,7 +7,7 @@
 // #include <core/rendering/features/deferred_lighting_feature.h>
 // #include <core/rendering/features/subsurface_scattering_feature.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct SceneRenderPath : RenderPath
 {

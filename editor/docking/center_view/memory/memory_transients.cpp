@@ -7,7 +7,7 @@
 #include <imgui_internal.h>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void MemoryTransients::draw(EditorContext& ctx)
 {

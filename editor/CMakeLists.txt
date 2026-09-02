@@ -1,23 +1,23 @@
-if(NOT BALLISTIC_BUILD_EDITOR)
+if(NOT LUMEN_BUILD_EDITOR)
     return()
 endif()
 
-file(GLOB_RECURSE BALLISTIC_EDITOR_SOURCES CONFIGURE_DEPENDS
+file(GLOB_RECURSE LUMEN_EDITOR_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 
-add_library(ballistic_editor STATIC ${BALLISTIC_EDITOR_SOURCES})
+add_library(lumen_editor STATIC ${LUMEN_EDITOR_SOURCES})
 
-target_include_directories(ballistic_editor
+target_include_directories(lumen_editor
 PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/generated
 )
 
-target_link_libraries(ballistic_editor
+target_link_libraries(lumen_editor
 PUBLIC
-    ballistic_compiler_options
-    ballistic_core
+    lumen_compiler_options
+    lumen_core
     bc7enc
 )

@@ -31,8 +31,8 @@ Roaming Root
 ├── app_userdata
 │   ├── <project_name>
 │   │   ├── logs
-│   │   │   ├── ballistic2026-02-05.log
-│   │   │   └── ballistic2026-03-04.log
+│   │   │   ├── lumen2026-02-05.log
+│   │   │   └── lumen2026-03-04.log
 │   │   └── pipeline_cache
 │   │       └── pipeline_cache.bin
 │   └── ...
@@ -100,11 +100,11 @@ LightCulling:
 
 
 
-# ballistic
+# lumen
 
 Proprietary game engine that focusses on rendering scenes with a high amount of foliage. Becasue this engine was made primarily for a wilderness hiking game,it does not focus too much on trying to get PBR look for man made metallic objects such as houses and mirrors and such.
 
 ## Light + Shadows
 
-Ballistic uses three shadow systems combined into one. The techniques help us with 
+Lumen uses three shadow systems combined into one. The techniques help us with 
 

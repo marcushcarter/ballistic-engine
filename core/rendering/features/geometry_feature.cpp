@@ -6,7 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <chrono>
 
-namespace ballistic {
+namespace lumen {
 
 Error GeometryFeature::create_resources()
 {

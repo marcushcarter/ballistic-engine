@@ -5,7 +5,7 @@
 #include <editor/docking/center_view/profiler/profiler_resources.h>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
     
 struct ProfilerDebugTab : DebugTab
 {

@@ -1,6 +1,6 @@
 #include <core/io/embedded_resource.h>
 
-namespace ballistic {
+namespace lumen {
 
 EmbeddedResource::Blob EmbeddedResource::load(const wchar_t* p_resource_name)
 {

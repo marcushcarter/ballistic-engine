@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <IconsFontAwesome6.h>
 
-namespace ballistic {
+namespace lumen {
 
 void EditorSettingsPopup::before_begin()
 {

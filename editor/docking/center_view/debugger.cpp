@@ -5,7 +5,7 @@
 #include <core/base/error.h>
 #include <cfloat>
 
-namespace ballistic {
+namespace lumen {
 
 void Debugger::initialize()
 {

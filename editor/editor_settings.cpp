@@ -1,7 +1,7 @@
 #include <editor/editor_settings.h>
 #include <drivers/windows/window_driver_win32.h>
 
-namespace ballistic {
+namespace lumen {
 
 static float luminance(const ImVec4& c) { return 0.2126f*c.x + 0.7152f*c.y + 0.0722f*c.z; }
 static ImVec4 fade(const ImVec4& c, float a) { return { c.x, c.y, c.z, a }; }

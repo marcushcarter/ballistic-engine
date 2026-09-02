@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct TaskSystem
 { 

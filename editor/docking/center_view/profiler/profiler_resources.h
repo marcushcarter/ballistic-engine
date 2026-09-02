@@ -2,7 +2,7 @@
 #include <editor/editor_context.h>
 #include <core/rendering/render_graph_profiler.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct ProfilerResources
 {

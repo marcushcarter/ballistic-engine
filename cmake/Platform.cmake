@@ -1,10 +1,10 @@
-target_compile_definitions(ballistic_compiler_options INTERFACE
+target_compile_definitions(lumen_compiler_options INTERFACE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
     UNICODE
     _UNICODE
     VK_USE_PLATFORM_WIN32_KHR
-    APP_NAME="Ballistic Engine"
+    APP_NAME="Lumen Engine"
     APP_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
     APP_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     APP_VERSION_PATCH=${PROJECT_VERSION_PATCH}

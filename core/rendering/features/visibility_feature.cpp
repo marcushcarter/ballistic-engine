@@ -1,6 +1,6 @@
 #include <core/rendering/features/visibility_feature.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error VisibilityFeature::create_resources()
 {

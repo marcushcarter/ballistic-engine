@@ -3,7 +3,7 @@
 #include <sal.h>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 void imgui_title(_Printf_format_string_ const char* p_fmt, ...);
 void imgui_link(const char* label, const char* url);

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace ballistic {
+namespace lumen {
 
 struct RenderGraph;
 namespace drivers { struct DeviceDriverVulkan; struct ImGuiDriver; }

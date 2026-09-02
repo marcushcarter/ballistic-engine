@@ -6,7 +6,7 @@
 #include <imgui_internal.h>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void MemoryDebugTab::draw(EditorContext& ctx)
 {

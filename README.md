@@ -1,13 +1,14 @@
 <div align="center">
 
-![Hero Section](./assets/editor/logos/logo.png)
-    <a href="https://www.youtube.com/@playballisticgames" target="_blank" rel="noopener">
-    <img src="https://img.shields.io/badge/youtube-d95652.svg?style=flat-square&logo=youtube&logoColor=white" alt="YouTube" style="height:20px;">
-    </a>
+![Hero Section](./assets/editor/logos/splash.png)
+<br>
+<a href="https://www.youtube.com/@playballisticgames" target="_blank" rel="noopener">
+<img src="https://img.shields.io/badge/youtube-d95652.svg?style=flat-square&logo=youtube&logoColor=white" alt="YouTube" style="height:20px;">
+</a>
 
 </div>
 
-# Ballistic
+# Lumen
 
 <!-- Text -->
 
@@ -18,8 +19,8 @@
 
 ### Clone Repository
 ```bash
-git clone --recursive https://github.com/marcushcarter/ballistic.git Ballistic
-cd Ballistic
+git clone --recursive https://github.com/marcushcarter/lumen.git Lumen
+cd Lumen
 git submodule update --init --recursive
 ```
 

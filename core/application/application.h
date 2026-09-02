@@ -11,7 +11,7 @@
 #include <string>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 struct RenderPath;
 

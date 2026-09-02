@@ -1,7 +1,7 @@
 #pragma once
 #include <windows.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct EmbeddedResource
 {

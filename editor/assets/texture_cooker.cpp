@@ -17,7 +17,7 @@
 #include <cstring>
 #include <cmath>
 
-namespace ballistic {
+namespace lumen {
 
 static float srgb_u8_to_linear(uint8_t p_c)
 {

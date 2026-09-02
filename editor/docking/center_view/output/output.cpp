@@ -5,7 +5,7 @@
 #include <IconsFontAwesome6.h>
 #include <fstream>
 
-namespace ballistic {
+namespace lumen {
 
 void OutputDebugTab::draw(EditorContext&)
 {    

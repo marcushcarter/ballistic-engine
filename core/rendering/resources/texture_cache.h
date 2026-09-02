@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 struct BTexture {
     Guid guid;

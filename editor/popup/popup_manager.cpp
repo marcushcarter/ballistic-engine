@@ -1,6 +1,6 @@
 #include <editor/popup/popup_manager.h>
 
-namespace ballistic {
+namespace lumen {
 
 void PopupManager::register_popup(std::unique_ptr<Popup> p)
 {

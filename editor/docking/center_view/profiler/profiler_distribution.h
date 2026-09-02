@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct ProfilerDistribution
 {

@@ -1,6 +1,6 @@
 // #include <core/rendering/render_path/features/deferred_lighting_feature.h>
 
-// namespace ballistic {
+// namespace lumen {
 
 // static drivers::DeviceDriverVulkan::ImageCreateInfo hdr_target_ci(const char* p_name = "")
 // {

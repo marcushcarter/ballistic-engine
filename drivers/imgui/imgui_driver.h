@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <string>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 struct ImGuiDriverCreateInfo
 {

@@ -1,17 +1,17 @@
-#include <editor/popup/about/about_ballistic.h>
+#include <editor/popup/about/about_lumen.h>
 #include <editor/editor_resources.h>
 #include <drivers/imgui/imgui_driver.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/version.h>
 
-namespace ballistic {
+namespace lumen {
     
-void AboutBallisticPopup::before_begin()
+void AboutLumenPopup::before_begin()
 {
     ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_Appearing);
 }
 
-void AboutBallisticPopup::draw_contents(EditorContext& ctx)
+void AboutLumenPopup::draw_contents(EditorContext& ctx)
 {
     constexpr float header_height = 90.0f;
 
@@ -23,8 +23,8 @@ void AboutBallisticPopup::draw_contents(EditorContext& ctx)
     
         ImGui::SameLine();
         ImGui::BeginGroup();
-        imgui_link("Ballistic Engine", "https://github.com/marcushcarter/ballistic");
-        ImGui::Text("Version %s", BALLISTIC_VERSION_FULL_BUILD);
+        imgui_link("Lumen Engine", "https://github.com/marcushcarter/lumen");
+        ImGui::Text("Version %s", LUMEN_VERSION_FULL_BUILD);
         ImGui::EndGroup();
     }
     ImGui::EndChild();

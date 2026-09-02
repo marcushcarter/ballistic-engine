@@ -8,7 +8,7 @@
 // #include <algorithm>
 // #include <system_error>
 
-namespace ballistic {
+namespace lumen {
 
 static std::filesystem::path _known_folder(const KNOWNFOLDERID& p_id, std::wstring_view p_subpath)
 {
@@ -20,7 +20,7 @@ static std::filesystem::path _known_folder(const KNOWNFOLDERID& p_id, std::wstri
     std::filesystem::path dir = raw;
     CoTaskMemFree(raw);
 
-    dir /= L"Ballistic Games/Ballistic";
+    dir /= L"Ballistic Games/Lumen";
     if (!p_subpath.empty()) dir /= p_subpath;
 
     std::error_code ec;

@@ -1,7 +1,7 @@
 #include <core/rendering/render_graph_profiler.h>
 #include <algorithm>
 
-namespace ballistic {
+namespace lumen {
 
 /***************/
 /**** SETUP ****/

@@ -1,6 +1,6 @@
 #include <drivers/toml/toml_helpers.h>
 
-namespace ballistic {
+namespace lumen {
 
 toml::array to_toml(const ImVec4& v) { return toml::array{v.x, v.y, v.z, v.w}; }
 

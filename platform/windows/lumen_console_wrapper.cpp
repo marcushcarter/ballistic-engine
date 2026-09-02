@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#ifndef BALLISTIC_WRAPPER_TARGET
-#error "ballistic_console_wrapper.cpp requires BALLISTIC_WRAPPER_TARGET (e.g. L\"ballistic_editor_app.exe\")"
+#ifndef LUMEN_WRAPPER_TARGET
+#error "lumen_console_wrapper.cpp requires LUMEN_WRAPPER_TARGET (e.g. L\"lumen_editor_app.exe\")"
 #endif
 
 static const wchar_t* skip_first_arg(const wchar_t* cmd)
@@ -27,7 +27,7 @@ int main()
 
     std::wstring dir(exe_path);
     const size_t slash = dir.find_last_of(L"\\/");
-    const std::wstring target = dir.substr(0, slash + 1) + BALLISTIC_WRAPPER_TARGET;
+    const std::wstring target = dir.substr(0, slash + 1) + LUMEN_WRAPPER_TARGET;
 
     HANDLE job = CreateJobObjectW(nullptr, nullptr);
     if (!job) {

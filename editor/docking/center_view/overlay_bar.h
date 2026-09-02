@@ -1,7 +1,7 @@
 #pragma once
 #include <imgui.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct OverlayBar
 {

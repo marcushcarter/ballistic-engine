@@ -4,7 +4,7 @@
 #include <editor/popup/project/new_project.h>
 #include <editor/popup/project/delete_project.h>
 #include <editor/popup/project/export.h>
-#include <editor/popup/about/about_ballistic.h>
+#include <editor/popup/about/about_lumen.h>
 #include <drivers/toml/toml_helpers.h>
 #include <core/io/embedded_resource.h>
 #include <core/io/path.h>
@@ -22,7 +22,7 @@
 #include <shellapi.h>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 Error EditorApplication::on_init()
 {
@@ -30,16 +30,16 @@ Error EditorApplication::on_init()
     Error err;
     
     win32.window_set_custom_titlebar(true);
-    win32.window_set_title("Ballistic Editor");
+    win32.window_set_title("Lumen Editor");
 
     err = resources.initialize(dd);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
-    err = win32.window_set_icon(EmbeddedResource::load_icon(L"BALLISTIC_ICON"));
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    err = win32.window_set_icon(EmbeddedResource::load_icon(L"LUMEN_ICON"));
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     ImVec4 titlebar = ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg];
     err = win32.window_set_titlebar_color(RGB((BYTE)(titlebar.x * 255), (BYTE)(titlebar.y * 255), (BYTE)(titlebar.z * 255)));
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     ImGuiIO& io = ImGui::GetIO();
     {
@@ -64,14 +64,14 @@ Error EditorApplication::on_init()
     popups.register_popup(std::make_unique<ExportPopup>());
     popups.register_popup(std::make_unique<NewProjectPopup>());
     popups.register_popup(std::make_unique<DeleteProjectPopup>());
-    popups.register_popup(std::make_unique<AboutBallisticPopup>());
+    popups.register_popup(std::make_unique<AboutLumenPopup>());
 
     err = project_manager.initialize();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = asset_manager.initialize();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = editor.initialize();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     _load_state();
     settings.theme.apply();
@@ -119,7 +119,7 @@ Error EditorApplication::open_project(const std::filesystem::path& p_root)
     using enum Error;
     
     Error err = project_load(p_root);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     render_path_request(new EditorRenderPath());
     project_manager.add_recent(project.root, project.name);
@@ -252,7 +252,7 @@ void EditorApplication::_draw_titlebar()
     const float H = MENU_H + TAB_H;
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    if (!ImGui::BeginViewportSideBar("##BallisticTitlebar", ImGui::GetMainViewport(), ImGuiDir_Up, H, flags)) {
+    if (!ImGui::BeginViewportSideBar("##LumenTitlebar", ImGui::GetMainViewport(), ImGuiDir_Up, H, flags)) {
         ImGui::PopStyleVar();
         ImGui::End();
         return;
@@ -297,7 +297,7 @@ void EditorApplication::_titlebar_menus(const TitlebarLayout& L)
     float menu_x1 = ImGui::GetCursorScreenPos().x;
     if (menu_x1 > menu_x0) _titlebar_block(L, ImVec2(menu_x0, L.origin.y), ImVec2(menu_x1, L.origin.y + L.menu_h));
 
-    const std::string& title = project.name.empty() ? std::string("Ballistic Editor") : project.name;
+    const std::string& title = project.name.empty() ? std::string("Lumen Editor") : project.name;
     ImVec2 ts = ImGui::CalcTextSize(title.c_str());
     float right_pad = win32.window.custom_titlebar ? (L.width - L.btn_w * 3.0f) : L.width;
     float title_x = L.origin.x + right_pad - ts.x - 16.0f;
@@ -424,16 +424,16 @@ void EditorApplication::_titlebar_logo(const TitlebarLayout& L)
 void EditorApplication::_titlebar_help_menu()
 {
     if (ImGui::BeginMenu("Help")) {
-        if (ImGui::MenuItem("Online Documentation")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-        if (ImGui::MenuItem("Forum")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
-        if (ImGui::MenuItem("Community")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("Online Documentation")) ShellExecuteA(nullptr, "open", "https://lumengames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("Forum")) ShellExecuteA(nullptr, "open", "https://lumengames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("Community")) ShellExecuteA(nullptr, "open", "https://lumengames.ca", nullptr, nullptr, SW_SHOWNORMAL);
         ImGui::Separator();
         if (ImGui::MenuItem("Copy System Info")) {
             const auto sys = win32.get_system_info();
             const auto gpu = dd.gpu_describe();
             char buf[1024];
             std::snprintf(buf, sizeof(buf),
-                "Ballistic v%d.%d.%d\n"
+                "Lumen v%d.%d.%d\n"
                 "OS:       %s (build %u)\n"
                 "Renderer: Vulkan %s (Deferred+)\n"
                 "GPU:      %s [%s]\n"
@@ -445,7 +445,7 @@ void EditorApplication::_titlebar_help_menu()
                 "Display:  %d monitor%s\n"
                 "Audio:    nah\n"
                 "Physics:  nah\n",
-                BALLISTIC_VERSION_MAJOR, BALLISTIC_VERSION_MINOR, BALLISTIC_VERSION_PATCH,
+                LUMEN_VERSION_MAJOR, LUMEN_VERSION_MINOR, LUMEN_VERSION_PATCH,
                 sys.os_name.c_str(), sys.os_build,
                 gpu.api_version.c_str(),
                 gpu.name.c_str(), gpu.type.c_str(),
@@ -459,8 +459,8 @@ void EditorApplication::_titlebar_help_menu()
             ImGui::SetClipboardText(buf);
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("About Ballistic")) popups.open("About Ballistic");
-        if (ImGui::MenuItem("Support Development")) ShellExecuteA(nullptr, "open", "https://ballisticgames.ca", nullptr, nullptr, SW_SHOWNORMAL);
+        if (ImGui::MenuItem("About Lumen")) popups.open("About Lumen");
+        if (ImGui::MenuItem("Support Development")) ShellExecuteA(nullptr, "open", "https://lumengames.ca", nullptr, nullptr, SW_SHOWNORMAL);
         ImGui::EndMenu();
     }
 }

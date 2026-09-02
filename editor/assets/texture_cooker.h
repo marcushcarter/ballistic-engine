@@ -2,7 +2,7 @@
 #include <editor/assets/asset_import_tracker.h>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 struct Project;
 struct EditorContext;

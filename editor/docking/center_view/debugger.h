@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-namespace ballistic {
+namespace lumen {
     
 struct Debugger
 {

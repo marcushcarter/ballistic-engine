@@ -4,7 +4,7 @@
 #include <thread>
 #include <cstring>
 
-namespace ballistic {
+namespace lumen {
 
 static constexpr char HEX[] = "0123456789abcdef";
 

@@ -2,7 +2,7 @@
 #include <editor/editor_context.h>
 #include <imgui.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct Popup
 {

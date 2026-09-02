@@ -3,7 +3,7 @@
 #include <core/base/error.h>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct Scene
 {

@@ -4,7 +4,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <fstream>
 
-namespace ballistic {
+namespace lumen {
     
 Error TextureCache::initialize(drivers::DeviceDriverVulkan& r_dd)
 {

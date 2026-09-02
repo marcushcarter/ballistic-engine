@@ -3,7 +3,7 @@
 #include <imgui.h>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 static void overlay_push_style()
 {

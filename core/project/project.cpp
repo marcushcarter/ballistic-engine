@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace ballistic {
+namespace lumen {
 
 void Project::_resolve_dirs(const std::filesystem::path& p_root)
 {
@@ -135,7 +135,7 @@ Error Project::destroy(const std::filesystem::path& p_root)
     std::error_code ec;
 
     if (!std::filesystem::exists(p_root / FILE_NAME, ec) || ec) {
-        log_write("Project: '%s' is not a Ballistic project; refusing to delete.", p_root.string().c_str());
+        log_write("Project: '%s' is not a Lumen project; refusing to delete.", p_root.string().c_str());
         return Failed;
     }
 

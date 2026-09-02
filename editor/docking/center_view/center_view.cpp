@@ -5,7 +5,7 @@
 #include <IconsFontAwesome6.h>
 #include <imgui_internal.h>
 
-namespace ballistic {
+namespace lumen {
 
 void CenterView::initialize()
 {

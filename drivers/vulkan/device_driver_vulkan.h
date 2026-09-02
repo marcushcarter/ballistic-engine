@@ -5,11 +5,11 @@
 #include <shaderc/shaderc.hpp>
 #include <vma/vk_mem_alloc.h>
 
-#include <drivers/vulkan/ballistic_vulkan.h>
+#include <drivers/vulkan/lumen_vulkan.h>
 
 #include <string>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 struct DeviceDriverVulkan
 {

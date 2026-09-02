@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-namespace ballistic {
+namespace lumen {
 
 struct DockWell
 {

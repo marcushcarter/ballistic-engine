@@ -3,7 +3,7 @@
 #include <core/io/embedded_resource.h>
 #include <iostream>
 
-namespace ballistic {
+namespace lumen {
 
 Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
 {
@@ -28,11 +28,11 @@ Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
     }
 
     Error err = graph.initialize(r_dd, frame_count);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     graph.declare_image_format("Backbuffer", dd->swapchain.format);
 
     err = textures.initialize(r_dd);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     set_size(1, 1);
     pending_width = width;
@@ -97,7 +97,7 @@ Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
     dd->device_wait_idle();
 
     Error err = graph.set_size(p_width, p_height);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
 }
@@ -121,11 +121,11 @@ Error Renderer::begin_frame()
     auto& sc = dd->swapchain;
 
     Error err = dd->fence_wait(in_flight_fences[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = dd->fence_reset(in_flight_fences[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = dd->swapchain_acquire_next_image(image_available_semaphores[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
@@ -143,9 +143,9 @@ Error Renderer::record()
     using enum Error;
 
     Error err = dd->command_pool_reset(command_pools[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = dd->command_buffer_begin(command_buffers[current_frame], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     VkCommandBuffer cmd = command_buffers[current_frame];
 
@@ -155,7 +155,7 @@ Error Renderer::record()
     graph.execute(cmd);
     
     err = dd->command_buffer_end(command_buffers[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
 }
@@ -177,7 +177,7 @@ Error Renderer::end_frame()
 
     VkQueue graphics_queue = dd->queue_families[dd->cd->graphics_queue_family][0].queue;
     VkResult result = vkQueueSubmit(graphics_queue, 1, &submit_info, in_flight_fences[current_frame]);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed, "Failed to submit Vulkan queue");
+    LUMEN_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed, "Failed to submit Vulkan queue");
 
     VkPresentInfoKHR present_info{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     present_info.waitSemaphoreCount = 1;
@@ -191,7 +191,7 @@ Error Renderer::end_frame()
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         dd->swapchain.surface->needs_resize = true;
     } else {
-        BALLISTIC_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed, "Failed to present Vulkan queue");
+        LUMEN_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed, "Failed to present Vulkan queue");
     }
 
     current_frame = (current_frame + 1) % frame_count;

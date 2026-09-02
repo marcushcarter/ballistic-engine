@@ -4,13 +4,13 @@
 #include <iterator>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 struct Theme
 {
-    ImVec4 base { 0.12f, 0.12f, 0.14f, 1.0f };
-    ImVec4 accent { 0.66f, 0.30f, 0.76f, 1.0f };
-    ImVec4 text { 0.92f, 0.92f, 0.94f, 1.0f };
+    ImVec4 base { 0.01f, 0.01f, 0.02f, 1.0f };
+    ImVec4 accent { 0.06f, 0.06f, 0.78f, 1.0f };
+    ImVec4 text { 0.92f, 0.92f, 0.92f, 1.0f };
     bool use_system_accent = false;
     int preset = -1;
 
@@ -19,7 +19,7 @@ struct Theme
     struct ThemePreset { const char* name; ImVec4 base, accent, text; };
 
     /**
-        ADD THEMES.CFG FILE TO EASILY EDIT THEMES AND IMPRT THEM
+        ADD THEMES.CFG FILE TO EASILY EDIT THEMES AND IMPORT THEM
         
         [Theme]
         Name=Default
@@ -38,10 +38,10 @@ struct Theme
      */
 
     static inline constexpr ThemePreset THEME_PRESETS[] = {
-        { "Default", { 0.12f, 0.12f, 0.14f, 1.0f }, { 0.66f, 0.30f, 0.76f, 1.0f }, { 0.92f, 0.92f, 0.94f, 1.0f } },
-        { "Dark", { 0.012f, 0.010f, 0.014f, 1.0f }, { 0.66f, 0.30f, 0.76f, 1.0f }, { 0.92f, 0.92f, 0.94f, 1.0f } },
-        { "Light", { 0.90f, 0.90f, 0.92f, 1.0f }, { 0.30f, 0.50f, 0.90f, 1.0f }, { 0.10f, 0.10f, 0.12f, 1.0f } },
-        { "Classic", { 0.14f, 0.14f, 0.15f, 1.0f }, { 0.35f, 0.55f, 0.85f, 1.0f }, { 0.92f, 0.92f, 0.94f, 1.0f } }, 
+        { "Default", { 0.01f, 0.01f, 0.02f, 1.0f }, { 0.06f, 0.06f, 0.78f, 1.0f }, { 0.92f, 0.92f, 0.92f, 1.0f } },
+        { "Dark", { 0.012f, 0.010f, 0.014f, 1.0f }, { 0.92f, 0.92f, 0.94f, 1.0f }, { 0.66f, 0.30f, 0.76f, 1.0f } },
+        { "Light", { 0.90f, 0.90f, 0.92f, 1.0f }, { 0.10f, 0.10f, 0.12f, 1.0f }, { 0.30f, 0.50f, 0.90f, 1.0f } },
+        { "Classic ImGui", { 0.78f, 0.78f, 0.78f, 1.0f }, { 0.00f, 0.88f, 0.88f, 1.0f }, { 0.00f, 0.00f, 0.00f, 1.0f } }, 
     };
     
     static const char* theme_preset_name(int i);

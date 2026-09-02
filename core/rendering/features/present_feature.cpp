@@ -2,7 +2,7 @@
 #include <drivers/vulkan/device_driver_vulkan.h>
 #include <core/io/embedded_resource.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error PresentFeature::create_resources()
 {   

@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string_view>
 
-namespace ballistic {
+namespace lumen {
 
 struct Paths
 {

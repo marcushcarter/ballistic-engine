@@ -2,7 +2,7 @@
 #include <core/rendering/render_path/scene_render_path.h>
 #include <core/rendering/features/present_feature.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct GameRenderPath : SceneRenderPath
 {

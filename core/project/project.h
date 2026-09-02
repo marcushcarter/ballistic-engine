@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace ballistic {
+namespace lumen {
 
 struct Project
 {

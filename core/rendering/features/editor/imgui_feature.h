@@ -2,7 +2,7 @@
 #include <core/rendering/features/feature.h>
 #include <drivers/vulkan/device_driver_vulkan.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct ImGuiFeature : Feature
 {

@@ -8,7 +8,7 @@
 #include <imgui.h>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void AssetBrowserGrid::_delete_content(const Project& p_project, const std::filesystem::path& p_asset)
 {

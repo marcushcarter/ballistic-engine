@@ -2,7 +2,7 @@
 #include <drivers/vulkan/device_driver_vulkan.h>
 #include <drivers/imgui/imgui_driver.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error ImGuiFeature::create_resources()
 {

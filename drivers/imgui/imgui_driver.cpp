@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
     
 Error ImGuiDriver::initialize(const ImGuiDriverCreateInfo& p_create_info)
 {
@@ -43,10 +43,10 @@ Error ImGuiDriver::initialize(const ImGuiDriverCreateInfo& p_create_info)
     pool_ci.pPoolSizes = pool_sizes;
 
     VkResult err = vkCreateDescriptorPool(device, &pool_ci, nullptr, &descriptor_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
         "Failed to initialize ImGui descriptor pool.");
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!ImGui_ImplWin32_Init(p_create_info.hwnd), Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(!ImGui_ImplWin32_Init(p_create_info.hwnd), Failed,
         "Failed to initialize ImGui Win32 backend.");
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -73,9 +73,9 @@ Error ImGuiDriver::initialize(const ImGuiDriverCreateInfo& p_create_info)
     init_info.ImageCount = p_create_info.image_count;
     init_info.PipelineInfoMain.RenderPass = p_create_info.render_pass;
     init_info.PipelineInfoMain.Subpass = p_create_info.subpass;
-    init_info.CheckVkResultFn = [](VkResult err){ if(err) fprintf(stderr, "[Ballistic] Vulkan error in ImGui backend: %d\n", err); };
+    init_info.CheckVkResultFn = [](VkResult err){ if(err) fprintf(stderr, "[Lumen] Vulkan error in ImGui backend: %d\n", err); };
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!ImGui_ImplVulkan_Init(&init_info), Failed, "Failed to initialize ImGui Vulkan backend.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!ImGui_ImplVulkan_Init(&init_info), Failed, "Failed to initialize ImGui Vulkan backend.");
 
     texture_cache.initialize(p_create_info.sampler);
 

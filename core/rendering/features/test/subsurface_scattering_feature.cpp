@@ -1,6 +1,6 @@
 // #include <core/rendering/render_path/features/subsurface_scattering_feature.h>
 
-// namespace ballistic {
+// namespace lumen {
 
 // static drivers::DeviceDriverVulkan::ImageCreateInfo sss_target_ci(const char* p_name = "")
 // {

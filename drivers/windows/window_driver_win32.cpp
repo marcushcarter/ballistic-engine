@@ -18,9 +18,9 @@
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, ImGuiIO& io);
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
     
-static const wchar_t* BALLISTIC_WINDOW_CLASS = L"BallisticWindowClass";
+static const wchar_t* LUMEN_WINDOW_CLASS = L"LumenWindowClass";
 
 static std::wstring utf8_to_wstring(const std::string& str)
 {
@@ -38,7 +38,7 @@ Error WindowDriverWin32::initialize()
     WNDCLASSW wc{};
     wc.lpfnWndProc = _wnd_proc;
     wc.hInstance = GetModuleHandleW(nullptr);
-    wc.lpszClassName = BALLISTIC_WINDOW_CLASS;
+    wc.lpszClassName = LUMEN_WINDOW_CLASS;
     RegisterClassW(&wc);
 
     return Ok;
@@ -46,7 +46,7 @@ Error WindowDriverWin32::initialize()
 
 void WindowDriverWin32::shutdown()
 {
-    UnregisterClassW(BALLISTIC_WINDOW_CLASS, GetModuleHandleW(nullptr));
+    UnregisterClassW(LUMEN_WINDOW_CLASS, GetModuleHandleW(nullptr));
 }
 
 void WindowDriverWin32::poll_events()
@@ -67,13 +67,13 @@ Error WindowDriverWin32::window_create(const std::string& p_title, int p_width, 
     std::wstring title = utf8_to_wstring(p_title);
 
     window.hwnd = CreateWindowExW(
-        0, BALLISTIC_WINDOW_CLASS, title.c_str(),
+        0, LUMEN_WINDOW_CLASS, title.c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, p_width, p_height,
         nullptr, nullptr, GetModuleHandleW(nullptr), this
     );
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!window.hwnd, Failed, "Couldn't create Win32 window.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!window.hwnd, Failed, "Couldn't create Win32 window.");
 
     window.width = static_cast<uint32_t>(p_width);
     window.height = static_cast<uint32_t>(p_height);
@@ -124,8 +124,8 @@ void WindowDriverWin32::window_request_close()
 Error WindowDriverWin32::window_set_icon(HICON p_icon)
 {
     using enum Error;
-    BALLISTIC_ERR_FAIL_COND_V(!p_icon, Failed);
-    BALLISTIC_ERR_FAIL_COND_V(!window.hwnd, Failed);
+    LUMEN_ERR_FAIL_COND_V(!p_icon, Failed);
+    LUMEN_ERR_FAIL_COND_V(!window.hwnd, Failed);
     SendMessageW(window.hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(p_icon));
     SendMessageW(window.hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(p_icon));
     return Ok;
@@ -145,9 +145,9 @@ Error WindowDriverWin32::window_set_title(std::string_view p_title)
 Error WindowDriverWin32::window_set_titlebar_color(COLORREF p_color)
 {
     using enum Error;
-    BALLISTIC_ERR_FAIL_COND_V(!window.hwnd, Failed);
+    LUMEN_ERR_FAIL_COND_V(!window.hwnd, Failed);
     HRESULT result = DwmSetWindowAttribute(window.hwnd, DWMWA_CAPTION_COLOR, &p_color, sizeof(p_color));
-    BALLISTIC_ERR_FAIL_COND_V_MSG(FAILED(result), Failed, "Failed to set Win32 window titlebar color - DWMWA_CAPTION_COLOR requires Windows 11 (build 22000+).");
+    LUMEN_ERR_FAIL_COND_V_MSG(FAILED(result), Failed, "Failed to set Win32 window titlebar color - DWMWA_CAPTION_COLOR requires Windows 11 (build 22000+).");
     return Ok;
 }
 

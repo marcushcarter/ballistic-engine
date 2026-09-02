@@ -1,7 +1,7 @@
 #pragma once
 #include <editor/popup/popup.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct ProjectSettingsPopup : Popup
 {

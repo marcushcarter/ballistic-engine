@@ -11,7 +11,7 @@
 #include <core/project/project.h>
 #include <editor/assets/asset_import_any.h>
 
-namespace ballistic {
+namespace lumen {
 
 void AssetBrowserToolbar::_breadcrumb(const std::filesystem::path& root, std::filesystem::path& selected)
 {

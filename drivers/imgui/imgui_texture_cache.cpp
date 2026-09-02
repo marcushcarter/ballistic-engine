@@ -1,7 +1,7 @@
 #include <drivers/imgui/imgui_texture_cache.h>
 #include <backends/imgui_impl_vulkan.h>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 Error ImGuiTextureCache::initialize(VkSampler p_sampler)
 {

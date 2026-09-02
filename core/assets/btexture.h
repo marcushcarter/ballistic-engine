@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 enum TextureFlags : uint32_t {
     TEXTURE_FLAG_SRGB = 1u << 0,

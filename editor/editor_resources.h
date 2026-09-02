@@ -3,7 +3,7 @@
 #include <core/base/error.h>
 #include <string>
 
-namespace ballistic {
+namespace lumen {
 
 struct EditorResources
 {

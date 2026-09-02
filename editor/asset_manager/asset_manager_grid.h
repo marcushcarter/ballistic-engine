@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <core/assets/guid.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct AssetBrowserGrid
 {

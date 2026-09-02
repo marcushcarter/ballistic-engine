@@ -1,6 +1,6 @@
 #include <core/base/tasks.h>
 
-namespace ballistic {
+namespace lumen {
 
 void TaskSystem::start(uint32_t p_worker_count, uint32_t p_high_reserve)
 {

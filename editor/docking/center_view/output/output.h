@@ -1,7 +1,7 @@
 #pragma once
 #include <editor/docking/center_view/debug_tab.h>
 
-namespace ballistic {
+namespace lumen {
     
 struct OutputDebugTab : DebugTab
 {

@@ -1,7 +1,7 @@
 #include <editor/assets/asset_import_tracker.h>
 #include <core/project/project.h>
 
-namespace ballistic {
+namespace lumen {
 
 std::shared_ptr<ImportControl> AssetImportTracker::add(const std::filesystem::path& p_dst, Guid p_guid, const std::filesystem::path& p_content_bin)
 {

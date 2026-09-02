@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void ProfilerDistribution::draw(EditorContext& ctx, const RenderGraphProfiler::Timing* selected, bool frozen)
 {

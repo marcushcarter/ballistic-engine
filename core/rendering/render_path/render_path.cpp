@@ -1,6 +1,6 @@
 #include <core/rendering/render_path/render_path.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error RenderPath::create_resources()
 {

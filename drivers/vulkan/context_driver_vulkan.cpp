@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <iostream>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 Error ContextDriverVulkan::_initialize_vulkan_version()
 {
@@ -17,13 +17,13 @@ Error ContextDriverVulkan::_initialize_vulkan_version()
     if (enumerate_instance_version) {
         uint32_t api_version = 0;
         VkResult err = enumerate_instance_version(&api_version);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumerateInstanceVersion failed unexpectedly.");
+        LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumerateInstanceVersion failed unexpectedly.");
         instance_api_version = api_version;
     } else {
         instance_api_version = VK_API_VERSION_1_0;
     }
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(instance_api_version < VK_API_VERSION_1_2, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(instance_api_version < VK_API_VERSION_1_2, Failed,
         "Your graphics driver only supports an older version of Vulkan than this engine requires (1.2 minimum)."
         "Please update your GPU drvier.");
 
@@ -50,15 +50,15 @@ Error ContextDriverVulkan::_initialize_instance_extensions()
     uint32_t instance_extension_count = 0;
     VkResult err = vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr);
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS && err != VK_INCOMPLETE, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS && err != VK_INCOMPLETE, Failed,
         "vkEnumerateInstanceExtensionProperties (count query) failed.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(instance_extension_count == 0, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(instance_extension_count == 0, Failed,
         "No Vulkan instance extensions were found.");
 
     std::vector<VkExtensionProperties> instance_extensions(instance_extension_count);
     err = vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data());
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS && err != VK_INCOMPLETE, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS && err != VK_INCOMPLETE, Failed,
         "vkEnumerateInstanceExtensionProperties (fetch) failed.");
 
     for (const auto& extension : instance_extensions) {
@@ -70,7 +70,7 @@ Error ContextDriverVulkan::_initialize_instance_extensions()
 
     for (const auto& [name, is_required] : requested_instance_extensions) {
         if (!enabled_instance_extension_names.contains(name)) {
-            BALLISTIC_ERR_FAIL_COND_V_MSG(is_required, Failed,
+            LUMEN_ERR_FAIL_COND_V_MSG(is_required, Failed,
                 ("Required Vulkan instance extension " + name + " was not found.").c_str());
         }
     }
@@ -86,7 +86,7 @@ Error ContextDriverVulkan::_find_validation_layers()
 
     uint32_t instance_layer_count = 0;
     VkResult err = vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
         "vkEnumerateInstanceLayerProperties (count query) failed.");
 
     if (instance_layer_count == 0) {
@@ -95,7 +95,7 @@ Error ContextDriverVulkan::_find_validation_layers()
 
     std::vector<VkLayerProperties> layer_properties(instance_layer_count);
     err = vkEnumerateInstanceLayerProperties(&instance_layer_count, layer_properties.data());
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
         "vkEnumerateInstanceLayerProperties (fetch) failed.");
 
     for (const auto& properties : layer_properties) {
@@ -106,7 +106,7 @@ Error ContextDriverVulkan::_find_validation_layers()
     }
 
     if (enabled_validation_layer_names.empty()) {
-        fprintf(stderr, "[Ballistic] Warning: VK_LAYER_KHRONOS_validation not found. Running without validation layers.\n");
+        fprintf(stderr, "[Lumen] Warning: VK_LAYER_KHRONOS_validation not found. Running without validation layers.\n");
     }
 
     return Ok;
@@ -127,14 +127,14 @@ Error ContextDriverVulkan::_initialize_instance()
     using enum Error;
 
     Error err = _find_validation_layers();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     // Instance
     VkApplicationInfo app_info{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    app_info.pApplicationName = BALLISTIC_VERSION_NAME;
-    app_info.applicationVersion = VK_MAKE_VERSION(BALLISTIC_VERSION_MAJOR, BALLISTIC_VERSION_MINOR, BALLISTIC_VERSION_PATCH);
-    app_info.pEngineName = BALLISTIC_VERSION_NAME;
-    app_info.engineVersion = VK_MAKE_VERSION(BALLISTIC_VERSION_MAJOR, BALLISTIC_VERSION_MINOR, BALLISTIC_VERSION_PATCH);
+    app_info.pApplicationName = LUMEN_VERSION_NAME;
+    app_info.applicationVersion = VK_MAKE_VERSION(LUMEN_VERSION_MAJOR, LUMEN_VERSION_MINOR, LUMEN_VERSION_PATCH);
+    app_info.pEngineName = LUMEN_VERSION_NAME;
+    app_info.engineVersion = VK_MAKE_VERSION(LUMEN_VERSION_MAJOR, LUMEN_VERSION_MINOR, LUMEN_VERSION_PATCH);
     app_info.apiVersion = instance_api_version;
 
     std::vector<const char*> extension_name_ptrs;
@@ -166,7 +166,7 @@ Error ContextDriverVulkan::_initialize_instance()
     }
 
     VkResult result = vkCreateInstance(&instance_ci, nullptr, &instance);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(result != VK_SUCCESS, Failed,
         "vkCreateInstance failed. Do you have a compatible Vulkan driver installed?");
 
     // Debug Messenger
@@ -186,13 +186,13 @@ Error ContextDriverVulkan::_initialize_instance()
         debug_messenger_ci.pUserData = this;
 
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-        BALLISTIC_ERR_FAIL_COND_V_MSG(!func, Failed, "vkCreateDebugUtilsMessengerEXT not present.");
+        LUMEN_ERR_FAIL_COND_V_MSG(!func, Failed, "vkCreateDebugUtilsMessengerEXT not present.");
 
         VkResult debug_result = func(instance, &debug_messenger_ci, nullptr, &debug_messenger);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(debug_result != VK_SUCCESS, Failed, "Failed to create Vulkan debug messenger.");
+        LUMEN_ERR_FAIL_COND_V_MSG(debug_result != VK_SUCCESS, Failed, "Failed to create Vulkan debug messenger.");
         
         functions.DestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-        BALLISTIC_ERR_FAIL_COND_V_MSG(!functions.DestroyDebugUtilsMessengerEXT, Failed, "vkDestroyDebugUtilsMessengerEXT not present.");
+        LUMEN_ERR_FAIL_COND_V_MSG(!functions.DestroyDebugUtilsMessengerEXT, Failed, "vkDestroyDebugUtilsMessengerEXT not present.");
     }
 
     // fill functions
@@ -208,14 +208,14 @@ Error ContextDriverVulkan::_initialize_devices()
 
     uint32_t physical_device_count = 0;
     VkResult err = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumeratePhysicalDevices (count query) failed.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(physical_device_count == 0, Failed, "No Vulkan-capable GPUs were found on this system.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumeratePhysicalDevices (count query) failed.");
+    LUMEN_ERR_FAIL_COND_V_MSG(physical_device_count == 0, Failed, "No Vulkan-capable GPUs were found on this system.");
 
     driver_devices.resize(physical_device_count);
     physical_devices.resize(physical_device_count);
     device_queue_families.resize(physical_device_count);
     err = vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices.data());
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumeratePhysicalDevices (fetch) failed.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumeratePhysicalDevices (fetch) failed.");
 
 	for (uint32_t i = 0; i < physical_devices.size(); i++) {
 		VkPhysicalDeviceProperties props;
@@ -244,16 +244,16 @@ Error ContextDriverVulkan::initialize()
     Error err;
     
     err = _initialize_vulkan_version();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = _initialize_instance_extensions();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = _initialize_instance();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = _initialize_devices();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
 }
@@ -263,15 +263,15 @@ Error ContextDriverVulkan::full_initialize_windows(HWND p_hwnd)
     using enum Error;
 
     Error err = initialize();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     // can be called for other backends
     err = surface_create(p_hwnd);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     // can be manually selected
     err = physical_device_select();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
 }
@@ -303,7 +303,7 @@ Error ContextDriverVulkan::surface_create(HWND p_hwnd)
     surface_ci.hwnd = p_hwnd;
 
     VkResult err = vkCreateWin32SurfaceKHR(instance, &surface_ci, nullptr, &surface.surface);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
         "vkCreateWin32SurfaceKHR failed.");
         
     surface.needs_resize = true;
@@ -383,7 +383,7 @@ Error ContextDriverVulkan::physical_device_select(int p_override_index)
 {
     using enum Error;
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(surface.surface == VK_NULL_HANDLE, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(surface.surface == VK_NULL_HANDLE, Failed,
         "select_physical_device() requires create_surface() to have already succeeded.");
 
     static const std::vector<const char*> required_device_extensions = {
@@ -391,19 +391,19 @@ Error ContextDriverVulkan::physical_device_select(int p_override_index)
     };
 
     if (p_override_index >= 0) {
-        BALLISTIC_ERR_FAIL_COND_V_MSG(static_cast<size_t>(p_override_index) >= physical_devices.size(), Failed,
+        LUMEN_ERR_FAIL_COND_V_MSG(static_cast<size_t>(p_override_index) >= physical_devices.size(), Failed,
             "Requested physical device index is out of range.");
 
         VkPhysicalDevice candidate = physical_devices[p_override_index];
 
-        BALLISTIC_ERR_FAIL_COND_V_MSG(!device_has_required_extensions(candidate, required_device_extensions), Failed,
+        LUMEN_ERR_FAIL_COND_V_MSG(!device_has_required_extensions(candidate, required_device_extensions), Failed,
             "Requested physical device does not support required extensions.");
 
         int graphics, present, transfer, compute;
         resolve_queue_families(candidate, surface.surface, device_queue_families[p_override_index].properties,
             graphics, present, transfer, compute);
 
-        BALLISTIC_ERR_FAIL_COND_V_MSG(graphics < 0 || present < 0, Failed,
+        LUMEN_ERR_FAIL_COND_V_MSG(graphics < 0 || present < 0, Failed,
             "Requested physical device lacks required queue support.");
 
         optimal_device_index = p_override_index;
@@ -450,7 +450,7 @@ Error ContextDriverVulkan::physical_device_select(int p_override_index)
         }
     }
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(optimal_device_index == -1, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(optimal_device_index == -1, Failed,
         "No suitable GPU found (missing required extensions or queue support).");
 
     return Ok;

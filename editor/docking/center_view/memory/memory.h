@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
     
 struct MemoryDebugTab : DebugTab
 {

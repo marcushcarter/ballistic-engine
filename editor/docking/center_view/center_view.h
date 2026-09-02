@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 struct CenterView
 {

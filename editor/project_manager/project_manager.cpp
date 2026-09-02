@@ -14,7 +14,7 @@
 #include <ctime>
 #include <numbers>
 
-namespace ballistic {
+namespace lumen {
 
 Error ProjectManager::initialize()
 {

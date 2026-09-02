@@ -3,7 +3,7 @@
 #include <core/application/application.h>
 #include <core/rendering/render_path/game_render_path.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct GameApplication : Application
 {

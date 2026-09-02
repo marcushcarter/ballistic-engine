@@ -4,7 +4,7 @@
 #include <core/io/path.h>
 #include <imgui.h>
 
-namespace ballistic {
+namespace lumen {
 
 void DeleteProjectPopup::before_begin()
 {

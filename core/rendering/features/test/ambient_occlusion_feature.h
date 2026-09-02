@@ -1,7 +1,7 @@
 // #pragma once
 // #include <core/rendering/features/feature.h>
 
-// namespace ballistic {
+// namespace lumen {
 
 // struct AmbientOcclusionFeature : Feature
 // {

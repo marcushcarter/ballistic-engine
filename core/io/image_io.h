@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 template<typename T, int Channels>
 struct ImageData

@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <implot.h>
 
-namespace ballistic {
+namespace lumen {
 
 void ProfilerDebugTab::draw(EditorContext& ctx)
 {

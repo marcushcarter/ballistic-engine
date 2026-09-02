@@ -10,7 +10,7 @@
 #include <cctype>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void NewProjectPopup::before_begin()
 {
@@ -19,7 +19,7 @@ void NewProjectPopup::before_begin()
 
 void NewProjectPopup::on_open(EditorContext&)
 {
-    std::snprintf(name_buf, sizeof(name_buf), "Test Ballistic");
+    std::snprintf(name_buf, sizeof(name_buf), "Test Lumen");
     std::snprintf(location_buf, sizeof(location_buf), "D:/");
     create_folder = true;
     edit_now = false;

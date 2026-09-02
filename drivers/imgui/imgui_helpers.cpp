@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <shellapi.h>
 
-namespace ballistic {
+namespace lumen {
 
 void imgui_title(const char* p_fmt, ...)
 {

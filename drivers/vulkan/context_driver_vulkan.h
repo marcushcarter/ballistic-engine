@@ -1,5 +1,5 @@
 #pragma once
-#include <drivers/vulkan/ballistic_vulkan.h>
+#include <drivers/vulkan/lumen_vulkan.h>
 #include <core/base/error.h>
 #include <windows.h>
 #include <unordered_map>
@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 struct DriverDevice {
     std::wstring name;

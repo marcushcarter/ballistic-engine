@@ -8,7 +8,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace ballistic {
+namespace lumen {
 
 void ProfilerTimeline::draw(EditorContext& ctx)
 {

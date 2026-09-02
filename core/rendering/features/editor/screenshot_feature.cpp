@@ -6,7 +6,7 @@
 #include <chrono>
 #include <ctime>
 
-namespace ballistic {
+namespace lumen {
 
 Error ScreenshotFeature::create_resources()
 {

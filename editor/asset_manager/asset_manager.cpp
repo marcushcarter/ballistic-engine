@@ -8,7 +8,7 @@
 #include <imgui_internal.h>
 #include <IconsFontAwesome6.h>
 
-namespace ballistic {
+namespace lumen {
     
 Error AssetManager::initialize()
 {

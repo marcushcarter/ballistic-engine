@@ -2,7 +2,7 @@
 #include <core/project/project.h>
 #include <imgui.h>
 
-namespace ballistic {
+namespace lumen {
 
 void ProjectSettingsPopup::draw_contents(EditorContext& ctx)
 {

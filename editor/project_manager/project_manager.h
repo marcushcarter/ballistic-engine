@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct ProjectManager
 {

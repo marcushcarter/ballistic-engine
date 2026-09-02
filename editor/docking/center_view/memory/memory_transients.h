@@ -3,7 +3,7 @@
 #include <core/rendering/render_graph_profiler.h>
 #include <cstdint>
 
-namespace ballistic {
+namespace lumen {
 
 struct MemoryTransients
 {

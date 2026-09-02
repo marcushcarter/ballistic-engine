@@ -2,7 +2,7 @@
 #include <functional>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 namespace drivers { struct WindowDriverWin32; }
 namespace drivers { struct ImGuiDriver; }

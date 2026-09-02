@@ -7,7 +7,7 @@
 #include <fstream>
 #include <filesystem>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 /***************/
 /**** SETUP ****/
@@ -37,7 +37,7 @@ Error DeviceDriverVulkan::_initialize_device_extensions()
     _register_requested_device_extension(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME, false);
     _register_requested_device_extension(VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME, false);
 
-#ifdef BALLISTIC_EDITOR
+#ifdef LUMEN_EDITOR
     _register_requested_device_extension(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false);
     _register_requested_device_extension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME, false);
     _register_requested_device_extension(VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME, false);
@@ -61,13 +61,13 @@ Error DeviceDriverVulkan::_initialize_device_extensions()
 
     uint32_t device_extension_count = 0;
     VkResult err = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &device_extension_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumerateDeviceExtensionProperties (count query) failed.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(device_extension_count == 0, Failed, "Couldn't find any Vulkan device extensions. Do you have a compatible Vulkan installable client driver (ICD) installed?");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "vkEnumerateDeviceExtensionProperties (count query) failed.");
+    LUMEN_ERR_FAIL_COND_V_MSG(device_extension_count == 0, Failed, "Couldn't find any Vulkan device extensions. Do you have a compatible Vulkan installable client driver (ICD) installed?");
 
 	std::vector<VkExtensionProperties> device_extensions;
     device_extensions.resize(device_extension_count);
     err = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &device_extension_count, device_extensions.data());
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan device extension properties.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan device extension properties.");
     
     for (uint32_t i = 0; i < device_extension_count; i++) {
         std::string extension_name(device_extensions[i].extensionName);
@@ -78,7 +78,7 @@ Error DeviceDriverVulkan::_initialize_device_extensions()
 
     for (const auto& [name, is_required] : requested_device_extensions) {
         if (!enabled_device_extension_names.contains(name)) {
-            BALLISTIC_ERR_FAIL_COND_V_MSG(is_required, Failed, ("Required Vulkan device extension " + name + " was not found.").c_str());
+            LUMEN_ERR_FAIL_COND_V_MSG(is_required, Failed, ("Required Vulkan device extension " + name + " was not found.").c_str());
         }
     }
 
@@ -114,7 +114,7 @@ Error DeviceDriverVulkan::_check_device_features()
         if (!physical_device_features.imageCubeArray) error_string += "- No support for image cube arrays.\n";
         if (!physical_device_features.independentBlend) error_string += "- No support for independentBlend.\n";
         error_string += "This is usually a hardware limitation; updating drivers won't help.";
-        BALLISTIC_ERR_FAIL_COND_V_MSG(true, Failed, error_string.c_str());
+        LUMEN_ERR_FAIL_COND_V_MSG(true, Failed, error_string.c_str());
     }
 
 #define VK_DEVICEFEATURE_ENABLE_IF(x) \
@@ -227,14 +227,14 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     supported_features2.pNext = &supported_1_2;
     vkGetPhysicalDeviceFeatures2(physical_device, &supported_features2);
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorIndexing, Failed, "GPU lacks descriptorIndexing, required for bindless rendering.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.runtimeDescriptorArray, Failed, "GPU lacks runtimeDescriptorArray, required for bindless rendering.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingPartiallyBound, Failed, "GPU lacks descriptorBindingPartiallyBound.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingSampledImageUpdateAfterBind, Failed, "GPU lacks descriptorBindingSampledImageUpdateAfterBind.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingStorageImageUpdateAfterBind, Failed, "GPU lacks descriptorBindingStorageImageUpdateAfterBind.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingVariableDescriptorCount, Failed, "GPU lacks descriptorBindingVariableDescriptorCount.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderSampledImageArrayNonUniformIndexing, Failed, "GPU lacks shaderSampledImageArrayNonUniformIndexing.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorIndexing, Failed, "GPU lacks descriptorIndexing, required for bindless rendering.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.runtimeDescriptorArray, Failed, "GPU lacks runtimeDescriptorArray, required for bindless rendering.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingPartiallyBound, Failed, "GPU lacks descriptorBindingPartiallyBound.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingSampledImageUpdateAfterBind, Failed, "GPU lacks descriptorBindingSampledImageUpdateAfterBind.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingStorageImageUpdateAfterBind, Failed, "GPU lacks descriptorBindingStorageImageUpdateAfterBind.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingVariableDescriptorCount, Failed, "GPU lacks descriptorBindingVariableDescriptorCount.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderSampledImageArrayNonUniformIndexing, Failed, "GPU lacks shaderSampledImageArrayNonUniformIndexing.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
 
     void* create_info_next = nullptr;
 
@@ -412,7 +412,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     device_ci.pEnabledFeatures = &requested_device_features;
    
     VkResult err = vkCreateDevice(physical_device, &device_ci, nullptr, &device);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed,
         "vkCreateDevice failed. Do you have a compatible Vulkan driver installed?");
 
 	for (uint32_t i = 0; i < queue_families.size(); i++) {
@@ -440,37 +440,37 @@ Error DeviceDriverVulkan::initialize(ContextDriverVulkan& r_cd, uint32_t p_devic
     shader_cache_dir = Paths::shader_cache().string();
     
     Error err = _initialize_device_extensions();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     _get_device_properties();
     
     err = _check_device_features();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     err = _check_device_capabilities();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     std::vector<VkDeviceQueueCreateInfo> queue_create_info;
     err = _add_queue_create_info(queue_create_info);
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     err = _initialize_device(queue_create_info);
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     err = allocator_create();
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = pipeline_cache_create();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     err = swapchain_create(&cd->surface);
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = swapchain_resize(frame_count);
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = bindless_heap_create(16384, 4096, 256);
-	BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     SamplerCreateInfo sampler_ci{};
     sampler_ci.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -502,7 +502,7 @@ Error DeviceDriverVulkan::device_wait_idle()
 {    
     using enum Error;
     VkResult err = vkDeviceWaitIdle(device);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't wait idle for Vulkan device.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't wait idle for Vulkan device.");
     return Ok;
 }
 
@@ -582,14 +582,14 @@ Error DeviceDriverVulkan::_allocator_pools_create()
     image_alloc.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     VkResult err = vmaFindMemoryTypeIndexForImageInfo(allocator, &image_probe, &image_alloc, &image_device_type_index);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for image pools.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for image pools.");
 
     err = make_pool(image_device_type_index, "image_transient", &image_transient_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create transient image pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create transient image pool.");
     err = make_pool(image_device_type_index, "image_persistent", &image_persistent_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create persistent image pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create persistent image pool.");
     err = make_pool(image_device_type_index, "image_texture", &image_texture_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create texture image pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create texture image pool.");
 
     // ---- device-local buffers ----
     VkBufferCreateInfo buffer_probe{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -607,12 +607,12 @@ Error DeviceDriverVulkan::_allocator_pools_create()
     device_buf_alloc.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     err = vmaFindMemoryTypeIndexForBufferInfo(allocator, &buffer_probe, &device_buf_alloc, &buffer_device_type_index);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for device buffer pools.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for device buffer pools.");
 
     err = make_pool(buffer_device_type_index, "buffer_geometry", &buffer_geometry_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create geometry buffer pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create geometry buffer pool.");
     err = make_pool(buffer_device_type_index, "buffer_device", &buffer_device_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create device buffer pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create device buffer pool.");
 
     // ---- bar buffers ----
     VmaAllocationCreateInfo bar_alloc{};
@@ -622,7 +622,7 @@ Error DeviceDriverVulkan::_allocator_pools_create()
 
     if (vmaFindMemoryTypeIndexForBufferInfo(allocator, &buffer_probe, &bar_alloc, &buffer_bar_type_index) == VK_SUCCESS) {
         err = make_pool(buffer_bar_type_index, "buffer_bar", &buffer_bar_pool);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create BAR buffer pool.");
+        LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create BAR buffer pool.");
         bar_available = true;
     } else {
         buffer_bar_type_index = UINT32_MAX;
@@ -640,9 +640,9 @@ Error DeviceDriverVulkan::_allocator_pools_create()
     upload_alloc.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     err = vmaFindMemoryTypeIndexForBufferInfo(allocator, &upload_probe, &upload_alloc, &upload_type_index);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for upload pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't resolve memory type for upload pool.");
     err = make_pool(upload_type_index, "upload", &upload_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create upload pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create upload pool.");
 
     // ---- readback buffers ----
     VkBufferCreateInfo readback_probe = buffer_probe;
@@ -655,7 +655,7 @@ Error DeviceDriverVulkan::_allocator_pools_create()
 
     if (vmaFindMemoryTypeIndexForBufferInfo(allocator, &readback_probe, &readback_alloc, &readback_type_index) == VK_SUCCESS) {
         err = make_pool(readback_type_index, "readback", &readback_pool);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create readback pool.");
+        LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create readback pool.");
     } else {
         readback_type_index = UINT32_MAX;
         log_write("No HOST_VISIBLE|HOST_CACHED memory type; readback pool unavailable.");
@@ -705,7 +705,7 @@ Error DeviceDriverVulkan::allocator_create()
     }
 
     VkResult err = vmaCreateAllocator(&allocator_ci, &allocator);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan memory allocator.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan memory allocator.");
 
     return _allocator_pools_create();
 }
@@ -748,7 +748,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::_image_create(const ImageCreateInf
     image_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     
     VkResult err = vkCreateImage(device, &image_ci, nullptr, &image.image);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan image.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan image.");
 
     VkImageMemoryRequirementsInfo2 req_info{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2 };
     req_info.image = image.image;
@@ -770,7 +770,7 @@ Error DeviceDriverVulkan::_image_bind(Image& r_image, VmaAllocation p_allocation
     using enum Error;
 
     VkResult err = vmaBindImageMemory(allocator, p_allocation, r_image.image);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't bind VMA image memory.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't bind VMA image memory.");
 
     r_image.allocation = p_allocation;
     return Ok;
@@ -791,7 +791,7 @@ Error DeviceDriverVulkan::_image_create_view(Image& r_image)
     view_ci.subresourceRange.layerCount = r_image.layers;
 
     VkResult err = vkCreateImageView(device, &view_ci, nullptr, &r_image.image_view);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan image view.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan image view.");
 
     return Ok;
 }
@@ -801,7 +801,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const Image
     using enum Error;
 
     Image image = _image_create(p_ci, p_extent);
-    BALLISTIC_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
+    LUMEN_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
 
     VmaAllocationCreateInfo alloc_ci{};
     alloc_ci.usage = VMA_MEMORY_USAGE_UNKNOWN;
@@ -822,13 +822,13 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const Image
         alloc_ci.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         err = vmaAllocateMemoryForImage(allocator, image.image, &alloc_ci, &allocation, nullptr);
     }
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't allocate image memory.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't allocate image memory.");
 
     Error e = _image_bind(image, allocation);
-    BALLISTIC_ERR_FAIL_COND_V(e != Ok, {});
+    LUMEN_ERR_FAIL_COND_V(e != Ok, {});
 
     e = _image_create_view(image);
-    BALLISTIC_ERR_FAIL_COND_V(e != Ok, {});
+    LUMEN_ERR_FAIL_COND_V(e != Ok, {});
 
     if (p_ci.usage & VK_IMAGE_USAGE_SAMPLED_BIT) image.bindless_sampled = bindless_heap_alloc_sampled(image.image_view);
     if (p_ci.usage & VK_IMAGE_USAGE_STORAGE_BIT) image.bindless_storage = bindless_heap_alloc_storage(image.image_view);
@@ -873,7 +873,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_texture(const void* p
     ci.name = p_name;
 
     Image image = image_create_dedicated(ci, { p_width, p_height });
-    BALLISTIC_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
+    LUMEN_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
 
     const VkDeviceSize bytes = (VkDeviceSize)p_width * p_height * 4;
 
@@ -884,7 +884,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_texture(const void* p
     staging_ci.pool = upload_pool;
     staging_ci.name = "texture_staging";
     Buffer staging = buffer_create(staging_ci);
-    BALLISTIC_ERR_FAIL_COND_V(!staging.buffer, {});
+    LUMEN_ERR_FAIL_COND_V(!staging.buffer, {});
     buffer_update(staging, p_rgba, bytes, 0);
     buffer_flush(staging, 0, bytes);
 
@@ -966,7 +966,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_texture_compressed(Vk
     ci.name = p_name;
 
     Image image = image_create_dedicated(ci, { p_width, p_height }); // auto-allocs bindless_sampled
-    BALLISTIC_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
+    LUMEN_ERR_FAIL_COND_V(image.image == VK_NULL_HANDLE, {});
 
     BufferCreateInfo staging_ci{};
     staging_ci.size = p_blocks_size;
@@ -975,7 +975,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_texture_compressed(Vk
     staging_ci.pool = upload_pool;
     staging_ci.name = "texture_bc_staging";
     Buffer staging = buffer_create(staging_ci);
-    BALLISTIC_ERR_FAIL_COND_V(!staging.buffer, {});
+    LUMEN_ERR_FAIL_COND_V(!staging.buffer, {});
     buffer_update(staging, p_blocks, p_blocks_size, 0);
     buffer_flush(staging, 0, p_blocks_size);
 
@@ -1069,8 +1069,8 @@ VkDeviceSize DeviceDriverVulkan::_next_power_of_2(VkDeviceSize v)
 
 DeviceDriverVulkan::Buffer DeviceDriverVulkan::buffer_create(const BufferCreateInfo& p_ci)
 {
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!p_ci.device_local && !p_ci.host_visible, {}, "Buffer must be device_local, host_visible, or both.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(p_ci.cpu_read && !p_ci.host_visible, {}, "cpu_read requires host_visible.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.device_local && !p_ci.host_visible, {}, "Buffer must be device_local, host_visible, or both.");
+    LUMEN_ERR_FAIL_COND_V_MSG(p_ci.cpu_read && !p_ci.host_visible, {}, "cpu_read requires host_visible.");
 
     using enum Error;
 
@@ -1125,7 +1125,7 @@ DeviceDriverVulkan::Buffer DeviceDriverVulkan::buffer_create(const BufferCreateI
         alloc_ci.pool = nullptr;
         err = vmaCreateBuffer(allocator, &buffer_ci, &alloc_ci, &buffer.buffer, &buffer.allocation, &alloc_info);
     }
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan buffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan buffer.");
 
     buffer.capacity = alloc_size;
     buffer.size = p_ci.size;
@@ -1176,7 +1176,7 @@ Error DeviceDriverVulkan::buffer_ensure_capacity(Buffer& r_buffer, VkDeviceSize 
     buffer_ci.name = r_buffer.name;
 
     Buffer fresh = buffer_create(buffer_ci);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!fresh.buffer, Failed, "Buffer ensure capacity reallocation failed.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!fresh.buffer, Failed, "Buffer ensure capacity reallocation failed.");
     fresh.size = p_size;
 
     buffer_free(r_buffer);
@@ -1187,8 +1187,8 @@ Error DeviceDriverVulkan::buffer_ensure_capacity(Buffer& r_buffer, VkDeviceSize 
 Error DeviceDriverVulkan::buffer_update(Buffer& r_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset)
 {
     using enum Error;
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!r_buffer.mapped, Failed, "Cannot update a non-host-visible buffer.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(p_offset + p_size > r_buffer.capacity, Failed, "Buffer update of of range.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!r_buffer.mapped, Failed, "Cannot update a non-host-visible buffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(p_offset + p_size > r_buffer.capacity, Failed, "Buffer update of of range.");
     memcpy(static_cast<uint8_t*>(r_buffer.mapped) + p_offset, p_data, p_size);
     return Ok;
 }
@@ -1198,7 +1198,7 @@ Error DeviceDriverVulkan::buffer_flush(Buffer& r_buffer, VkDeviceSize p_offset, 
     using enum Error;
     if (r_buffer.coherent || !r_buffer.allocation) return Ok;
     VkResult err = vmaFlushAllocation(allocator, r_buffer.allocation, p_offset, p_size);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't flush buffer allocation.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't flush buffer allocation.");
     return Ok;
 }
 
@@ -1207,7 +1207,7 @@ Error DeviceDriverVulkan::buffer_invalidate(Buffer& r_buffer, VkDeviceSize p_off
     using enum Error;
     if (r_buffer.coherent || !r_buffer.allocation) return Ok;
     VkResult err = vmaInvalidateAllocation(allocator, r_buffer.allocation, p_offset, p_size);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't invalidate buffer allocation.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't invalidate buffer allocation.");
     return Ok;
 }
 
@@ -1267,7 +1267,7 @@ DeviceDriverVulkan::Sampler DeviceDriverVulkan::sampler_create(const SamplerCrea
 
     Sampler sampler;
     VkResult err = vkCreateSampler(device, &sampler_ci, nullptr, &sampler.sampler);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan sampler.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan sampler.");
 
     sampler.bindless_sampler = bindless_heap_alloc_sampler(sampler.sampler);
 
@@ -1298,7 +1298,7 @@ VkFence DeviceDriverVulkan::fence_create(bool p_signaled)
     
     VkFence fence;
     VkResult err = vkCreateFence(device, &fence_ci, nullptr, &fence);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan fence.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan fence.");
     
     return fence;
 }
@@ -1315,7 +1315,7 @@ Error DeviceDriverVulkan::fence_wait(VkFence p_fence, uint64_t p_timeout)
 {
     using enum Error;
     VkResult err = vkWaitForFences(device, 1, &p_fence, VK_TRUE, p_timeout);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't wait for Vulkan fence.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't wait for Vulkan fence.");
     return Ok;
 }
 
@@ -1323,7 +1323,7 @@ Error DeviceDriverVulkan::fence_reset(VkFence p_fence)
 {
     using enum Error;
     VkResult err = vkResetFences(device, 1, &p_fence);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't reset Vulkan fence.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't reset Vulkan fence.");
     return Ok;
 }
 
@@ -1339,7 +1339,7 @@ VkSemaphore DeviceDriverVulkan::semaphore_create()
     
     VkSemaphore semaphore;
     VkResult err = vkCreateSemaphore(device, &semaphore_ci, nullptr, &semaphore);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan semaphore.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan semaphore.");
     
     return semaphore;
 }
@@ -1377,7 +1377,7 @@ DeviceDriverVulkan::QueryPool DeviceDriverVulkan::query_pool_create_timestamp(ui
     QueryPool query_pool;
     query_pool.capacity = p_query_count;
     VkResult err = vkCreateQueryPool(device, &query_pool_ci, nullptr, &query_pool.pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan timestamp query pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan timestamp query pool.");
 
     return query_pool;
 }
@@ -1391,7 +1391,7 @@ DeviceDriverVulkan::QueryPool DeviceDriverVulkan::query_pool_create_occlusion(ui
     QueryPool query_pool;
     query_pool.capacity = p_query_count;
     VkResult err = vkCreateQueryPool(device, &query_pool_ci, nullptr, &query_pool.pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan occlusion query pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan occlusion query pool.");
     return query_pool;
 }
 
@@ -1405,7 +1405,7 @@ DeviceDriverVulkan::QueryPool DeviceDriverVulkan::query_pool_create_pipeline_sta
     QueryPool query_pool;
     query_pool.capacity = p_query_count;
     VkResult err = vkCreateQueryPool(device, &query_pool_ci, nullptr, &query_pool.pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan pipeline-statistics query query_pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan pipeline-statistics query query_pool.");
     return query_pool;
 }
 
@@ -1424,7 +1424,7 @@ Error DeviceDriverVulkan::query_pool_get_results(const QueryPool& p_query_pool, 
     const VkDeviceSize stride = (VkDeviceSize)p_stride_u64 * sizeof(uint64_t);
     VkResult err = vkGetQueryPoolResults(device, p_query_pool.pool, p_first, p_count, (size_t)p_count * stride, r_results, stride, VK_QUERY_RESULT_64_BIT);
     if (err == VK_NOT_READY) return Failed;
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan query pool results.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan query pool results.");
     return Ok;
 }
 
@@ -1461,7 +1461,7 @@ DeviceDriverVulkan::CommandPool DeviceDriverVulkan::command_pool_create(uint32_t
     CommandPool cmd_pool;
     cmd_pool.buffer_level = p_buffer_level;
     VkResult err = vkCreateCommandPool(device, &cmd_pool_ci, nullptr, &cmd_pool.command_pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan command pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan command pool.");
 
     return cmd_pool;
 }
@@ -1478,7 +1478,7 @@ Error DeviceDriverVulkan::command_pool_reset(CommandPool& r_cmd_pool)
 {
     using enum Error;
     VkResult err = vkResetCommandPool(device, r_cmd_pool.command_pool, 0);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't reset Vulkan command pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't reset Vulkan command pool.");
     return Ok;
 }
 
@@ -1491,7 +1491,7 @@ VkCommandBuffer DeviceDriverVulkan::command_buffer_create(CommandPool& p_cmd_poo
 
     VkCommandBuffer cmd_buffer;
     VkResult err = vkAllocateCommandBuffers(device, &cmd_buffer_ci, &cmd_buffer);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan command buffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan command buffer.");
     
     return cmd_buffer;
 }
@@ -1502,7 +1502,7 @@ Error DeviceDriverVulkan::command_buffer_begin(VkCommandBuffer p_cmd_buffer, VkC
     VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     begin_info.flags = p_flags;
     VkResult err = vkBeginCommandBuffer(p_cmd_buffer, &begin_info);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't begin Vulkan command buffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't begin Vulkan command buffer.");
     return Ok;
 }
 
@@ -1510,7 +1510,7 @@ Error DeviceDriverVulkan::command_buffer_end(VkCommandBuffer p_cmd_buffer)
 {
     using enum Error;
     VkResult err = vkEndCommandBuffer(p_cmd_buffer);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't end Vulkan command buffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't end Vulkan command buffer.");
     return Ok;
 }
 
@@ -1578,11 +1578,11 @@ bool DeviceDriverVulkan::_determine_swapchain_format(ContextDriverVulkan::Surfac
     std::vector<VkSurfaceFormatKHR> surface_formats;
     uint32_t format_count = 0;
     VkResult err = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, r_surface->surface, &format_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, false, "Couldn't get Vulkan surface present modes.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, false, "Couldn't get Vulkan surface present modes.");
 
 	surface_formats.resize(format_count);
 	err = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, r_surface->surface, &format_count, surface_formats.data());
-	BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, false, "Couldn't get Vulkan surface present modes.");
+	LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, false, "Couldn't get Vulkan surface present modes.");
 
     VkSurfaceFormatKHR surface_format = surface_formats[0];
     for (const auto& f : surface_formats) {
@@ -1625,12 +1625,12 @@ void DeviceDriverVulkan::_swapchain_release()
 Error DeviceDriverVulkan::swapchain_create(ContextDriverVulkan::Surface* r_surface)
 {
     using enum Error;
-    BALLISTIC_ERR_FAIL_COND_V(!r_surface, Failed);
+    LUMEN_ERR_FAIL_COND_V(!r_surface, Failed);
     swapchain.surface = r_surface;
 
     VkSurfaceFormatKHR surface_format{};
     if (!_determine_swapchain_format(r_surface, surface_format)) {
-        BALLISTIC_ERR_FAIL_COND_V_MSG(true, Failed, "Vulkan surface did not return any valid formats.");
+        LUMEN_ERR_FAIL_COND_V_MSG(true, Failed, "Vulkan surface did not return any valid formats.");
     } else {
         swapchain.format = surface_format.format;
         swapchain.color_space = surface_format.colorSpace;
@@ -1661,7 +1661,7 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
     ContextDriverVulkan::Surface* surface = (ContextDriverVulkan::Surface*)(swapchain.surface);
     VkSurfaceCapabilitiesKHR surface_capabilities = {};
     VkResult err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface->surface, &surface_capabilities);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface capabilities.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface capabilities.");
 
     if (!swapchain.swapchain) {
         if (surface_capabilities.currentExtent.width == 0xFFFFFFFF) {
@@ -1687,11 +1687,11 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
     std::vector<VkPresentModeKHR> present_modes;
     uint32_t present_modes_count = 0;
     err = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface->surface, &present_modes_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface present modes.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface present modes.");
 
 	present_modes.resize(present_modes_count);
 	err = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface->surface, &present_modes_count, present_modes.data());
-	BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface present modes.");
+	LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan surface present modes.");
 
     VkPresentModeKHR present_mode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
 	std::string present_mode_name = "Enabled";
@@ -1720,7 +1720,7 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
 
     VkSurfaceFormatKHR surface_format{};
     if (!_determine_swapchain_format(surface, surface_format)) {
-        BALLISTIC_ERR_FAIL_COND_V_MSG(true, Failed, "Vulkan surface did not return any valid formats.");
+        LUMEN_ERR_FAIL_COND_V_MSG(true, Failed, "Vulkan surface did not return any valid formats.");
     } else {
         swapchain.format = surface_format.format;
         swapchain.color_space = surface_format.colorSpace;
@@ -1741,15 +1741,15 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
     swap_ci.clipped = VK_TRUE;
 
     err = vkCreateSwapchainKHR(device, &swap_ci, nullptr, &swapchain.swapchain);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan swapchain.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan swapchain.");
     
     uint32_t image_count = 0;
     err = vkGetSwapchainImagesKHR(device, swapchain.swapchain, &image_count, nullptr);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan swapchain images.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan swapchain images.");
     
     std::vector<VkImage> raw_images(image_count);
     err = vkGetSwapchainImagesKHR(device, swapchain.swapchain, &image_count, raw_images.data());
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan swapchain images.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get Vulkan swapchain images.");
 
     VkImageViewCreateInfo view_ci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -1777,7 +1777,7 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
 
         view_ci.image = img.image;
         err = vkCreateImageView(device, &view_ci, nullptr, &img.image_view);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan image view for swapchain image.");
+        LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan image view for swapchain image.");
     }
 
     swapchain.framebuffers.resize(image_count);
@@ -1786,7 +1786,7 @@ Error DeviceDriverVulkan::swapchain_resize(uint32_t p_desired_framebuffer_count)
         attachments.push_back(swapchain.images[i].image_view);
 
         swapchain.framebuffers[i] = framebuffer_create(swapchain.render_pass, attachments, extent);
-        BALLISTIC_ERR_FAIL_COND_V_MSG(!swapchain.framebuffers[i], Failed, "Couldn't create swapchain framebuffer.");
+        LUMEN_ERR_FAIL_COND_V_MSG(!swapchain.framebuffers[i], Failed, "Couldn't create swapchain framebuffer.");
     }
 
 	VkSemaphore semaphore = VK_NULL_HANDLE;
@@ -1815,7 +1815,7 @@ Error DeviceDriverVulkan::swapchain_acquire_next_image(VkSemaphore p_signal_sema
         swapchain.surface->needs_resize = true;
         return Ok;
     }
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get next Vulkan swapchain image.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't get next Vulkan swapchain image.");
     
     return Ok;
     
@@ -1879,7 +1879,7 @@ Error DeviceDriverVulkan::bindless_heap_create(uint32_t p_sampled_count, uint32_
     layout_ci.pBindings = bindings;
 
     VkResult err = vkCreateDescriptorSetLayout(device, &layout_ci, nullptr, &bindless_heap.layout);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor set layout.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor set layout.");
 
     VkDescriptorPoolSize pool_sizes[3] = {
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, sampled },
@@ -1894,7 +1894,7 @@ Error DeviceDriverVulkan::bindless_heap_create(uint32_t p_sampled_count, uint32_
     pool_ci.pPoolSizes = pool_sizes;
 
     err = vkCreateDescriptorPool(device, &pool_ci, nullptr, &bindless_heap.pool);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor pool.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor pool.");
 
     VkDescriptorSetAllocateInfo set_ai{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     set_ai.descriptorPool = bindless_heap.pool;
@@ -1902,7 +1902,7 @@ Error DeviceDriverVulkan::bindless_heap_create(uint32_t p_sampled_count, uint32_
     set_ai.pSetLayouts = &bindless_heap.layout;
 
     err = vkAllocateDescriptorSets(device, &set_ai, &bindless_heap.set);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor set.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan descriptor set.");
 
     VkPushConstantRange push_range{};
     push_range.stageFlags = VK_SHADER_STAGE_ALL;
@@ -1916,7 +1916,7 @@ Error DeviceDriverVulkan::bindless_heap_create(uint32_t p_sampled_count, uint32_
     pl_ci.pPushConstantRanges = &push_range;
 
     err = vkCreatePipelineLayout(device, &pl_ci, nullptr, &bindless_heap.pipeline_layout);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan pipeline layout.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan pipeline layout.");
 
     return Ok;
 }
@@ -2047,7 +2047,7 @@ VkFramebuffer DeviceDriverVulkan::framebuffer_create(VkRenderPass p_render_pass,
 
     VkFramebuffer framebuffer;
     VkResult err = vkCreateFramebuffer(device, &framebuffer_ci, nullptr, &framebuffer);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan framebuffer.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan framebuffer.");
 
     // set_object_name(VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)framebuffer, p_ci.name);
     return framebuffer;
@@ -2157,7 +2157,7 @@ Error DeviceDriverVulkan::pipeline_cache_create()
     cache_ci.pInitialData = initial_data.empty() ? nullptr : initial_data.data();
 
     VkResult err = vkCreatePipelineCache(device, &cache_ci, nullptr, &pipeline_cache);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan pipeline cache.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't create Vulkan pipeline cache.");
 
     return Ok;
 }
@@ -2245,7 +2245,7 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
             options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
             shaderc::SpvCompilationResult res = compiler.CompileGlslToSpv(p_ci.glsl, source_len, _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
-            BALLISTIC_ERR_FAIL_COND_V_MSG(res.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, res.GetErrorMessage().c_str());
+            LUMEN_ERR_FAIL_COND_V_MSG(res.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, res.GetErrorMessage().c_str());
 
             spirv_storage.assign(res.cbegin(), res.cend());
             code = spirv_storage.data();
@@ -2260,7 +2260,7 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
         }
     }
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!code || code_size == 0, VK_NULL_HANDLE, "No shader code provided.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!code || code_size == 0, VK_NULL_HANDLE, "No shader code provided.");
 
     VkShaderModuleCreateInfo shader_ci{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
     shader_ci.codeSize = code_size;
@@ -2268,7 +2268,7 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
 
     VkShaderModule module;
     VkResult err = vkCreateShaderModule(device, &shader_ci, nullptr, &module);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan shader module.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan shader module.");
 
     set_object_name(VK_OBJECT_TYPE_SHADER_MODULE, (uint64_t)module, p_ci.name);
     return module;
@@ -2324,8 +2324,8 @@ DeviceDriverVulkan::Pipeline DeviceDriverVulkan::graphics_pipeline_create(const 
 {
     using enum Error;
 
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!p_ci.render_pass, {}, "Graphics pipeline needs a render pass.");
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!p_ci.vertex_shader, {}, "Graphics pipeline needs a vertex shader.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.render_pass, {}, "Graphics pipeline needs a render pass.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.vertex_shader, {}, "Graphics pipeline needs a vertex shader.");
 
     // ---- shader stages ----
     VkPipelineShaderStageCreateInfo stages[2]{};
@@ -2426,7 +2426,7 @@ DeviceDriverVulkan::Pipeline DeviceDriverVulkan::graphics_pipeline_create(const 
     Pipeline pipeline;
     pipeline.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
     VkResult err = vkCreateGraphicsPipelines(device, pipeline_cache, 1, &pipeline_ci, nullptr, &pipeline.pipeline);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
 
     set_object_name(VK_OBJECT_TYPE_PIPELINE, (uint64_t)pipeline.pipeline, p_ci.name);
     return pipeline;
@@ -2436,14 +2436,14 @@ DeviceDriverVulkan::Pipeline DeviceDriverVulkan::compute_pipeline_create(const C
 {
     using enum Error;
     
-    BALLISTIC_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");
 
     VkComputePipelineCreateInfo pipeline_ci{};
     
     Pipeline pipeline;
     pipeline.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
     VkResult err = vkCreateComputePipelines(device, pipeline_cache, 1, &pipeline_ci, nullptr, &pipeline.pipeline);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
 
     set_object_name(VK_OBJECT_TYPE_PIPELINE, (uint64_t)pipeline.pipeline, p_ci.name);
     return pipeline;
@@ -2553,7 +2553,7 @@ VkRenderPass DeviceDriverVulkan::render_pass_create(const RenderPassCreateInfo& 
 
     VkRenderPass render_pass;
     VkResult err = vkCreateRenderPass(device, &render_pass_ci, nullptr, &render_pass);
-    BALLISTIC_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan render pass.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, VK_NULL_HANDLE, "Couldn't create Vulkan render pass.");
 
     set_object_name(VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)render_pass, p_ci.name);
     return render_pass;

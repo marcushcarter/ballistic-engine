@@ -5,30 +5,30 @@
 #include <chrono>
 #include <iostream>
 
-namespace ballistic {
+namespace lumen {
 
 Error Application::initialize(const ApplicationCreateInfo& p_create_info)
 {
     using enum Error;
     Error err;
 
-    ballistic::log_write("%s v%s.stable.official - https://ballisticgames.ca", BALLISTIC_VERSION_NAME, BALLISTIC_VERSION_NUMBER);
+    lumen::log_write("%s v%s.stable.official - https://lumengames.ca", LUMEN_VERSION_NAME, LUMEN_VERSION_NUMBER);
 
     err = win32.initialize();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     err = win32.window_create(p_create_info.window_title, p_create_info.width, p_create_info.height, wants_custom_titlebar());
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     win32.window_bind();
 
     err = cd.full_initialize_windows(win32.window.hwnd);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = dd.initialize(cd, cd.optimal_device_index, 3);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     err = renderer.initialize(dd);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     drivers::ImGuiDriverCreateInfo imgui_ci{};
     imgui_ci.hwnd = win32.window.hwnd;
@@ -43,14 +43,14 @@ Error Application::initialize(const ApplicationCreateInfo& p_create_info)
     imgui_ci.ini_path = p_create_info.ini_path;
     imgui_ci.enable_docking = wants_docking();
     err = imgui.initialize(imgui_ci);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     render_path = create_render_path();
     render_path->ctx.dd = &dd;
     render_path->ctx.imgui = &imgui;
     render_path->ctx.graph = &renderer.graph;
     err = render_path->create_resources();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     tasks.start(std::max(1u, std::thread::hardware_concurrency() - 1u), 1);
     
@@ -86,7 +86,7 @@ int Application::run()
     Error err;
 
     err = on_init();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, static_cast<int>(err));
+    LUMEN_ERR_FAIL_COND_V(err != Ok, static_cast<int>(err));
 
     auto lastTime = std::chrono::steady_clock::now();
 
@@ -116,7 +116,7 @@ int Application::run()
         Error rec_err = Ok;
         TaskSystem::Handle rec = tasks.dispatch([&]{ rec_err = renderer.record(); }, TaskSystem::Priority::High);
         tasks.wait(rec);
-        BALLISTIC_ERR_FAIL_COND_V(rec_err != Ok, (int)rec_err);
+        LUMEN_ERR_FAIL_COND_V(rec_err != Ok, (int)rec_err);
         
         renderer.end_frame();
         imgui.end_frame(renderer.frame_number);
@@ -131,11 +131,11 @@ Error Application::project_load(const std::filesystem::path &p_root)
 {
     using enum Error;
     Error err = project.load(p_root);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = renderer.load(project.content_dir);
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = scenes.load();
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     return Ok;
 }
 

@@ -4,7 +4,7 @@
 #include <filesystem>
 
 
-namespace ballistic {
+namespace lumen {
 
 struct ProjectSettings
 {

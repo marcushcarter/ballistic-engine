@@ -6,7 +6,7 @@
 #include <imgui_internal.h>
 #include <IconsFontAwesome6.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error Editor::initialize()
 {
@@ -34,7 +34,7 @@ void Editor::_draw_toolbar(EditorContext&)
     // ImGui::SameLine();
     // if (ImGui::Button(ICON_FA_STOP)) {}
     // ImGui::SameLine();
-    // ImGui::TextDisabled("Ballistic");
+    // ImGui::TextDisabled("Lumen");
     // ImGui::SameLine();
 
     // ImGui::Text("panels=%d, rtop=%d, rbot=%d",

@@ -1,7 +1,7 @@
 #include <core/assets/asset_common.h>
 #include <toml++/toml.hpp>
 
-namespace ballistic {
+namespace lumen {
 
 AssetInfo read_asset_info(const std::filesystem::path& p_path)
 {

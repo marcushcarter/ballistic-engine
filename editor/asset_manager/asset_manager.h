@@ -9,7 +9,7 @@
 #include <imgui.h>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 struct AssetManager
 {

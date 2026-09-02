@@ -4,15 +4,15 @@
 #include <windows.h>
 #include <shellapi.h>
 
-namespace ballistic {
+namespace lumen {
 
 Error GameApplication::on_init()
 {
     using enum Error;
 
     // Error err = project_load(Paths::executable_dir());
-    Error err = project_load("D:/TestBallistic");
-    BALLISTIC_ERR_FAIL_COND_V(err != Ok, err);
+    Error err = project_load("D:/TestLumen");
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     win32.window_set_title(project.name);
     win32.window_set_size(project.settings.width, project.settings.height);

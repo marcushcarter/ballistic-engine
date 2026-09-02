@@ -1,4 +1,4 @@
-function(ballistic_generate_asset_rc OUTPUT_RC)
+function(lumen_generate_asset_rc OUTPUT_RC)
     cmake_parse_arguments(ARG "" "" "FILES" ${ARGN})
     set(ASSET_DIRS ${ARG_UNPARSED_ARGUMENTS})
     set(RC_CONTENT "")

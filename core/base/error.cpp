@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdarg>
 
-namespace ballistic {
+namespace lumen {
 
 const char *error_names[] = {
 	"OK",

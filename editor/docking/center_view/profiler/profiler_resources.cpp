@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstdio>
 
-namespace ballistic {
+namespace lumen {
 
 void ProfilerResources::draw(EditorContext& ctx, const char* p_pass_name)
 {

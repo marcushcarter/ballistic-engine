@@ -4,7 +4,7 @@
 #include <core/rendering/resources/texture_cache.h>
 #include <core/base/error.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct Renderer
 {

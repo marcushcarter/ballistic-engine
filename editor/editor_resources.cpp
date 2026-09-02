@@ -2,7 +2,7 @@
 #include <core/io/image_io.h>
 #include <core/io/embedded_resource.h>
 
-namespace ballistic {
+namespace lumen {
     
 Error EditorResources::initialize(drivers::DeviceDriverVulkan& r_dd)
 {
@@ -10,7 +10,7 @@ Error EditorResources::initialize(drivers::DeviceDriverVulkan& r_dd)
 
     dd = &r_dd;
     
-    ImageData<uint8_t, 4> icon_data = ImageIO::load_from_resource<uint8_t, 4>(L"LOGOS_ICON_PNG");
+    ImageData<uint8_t, 4> icon_data = ImageIO::load_from_resource<uint8_t, 4>(L"LOGOS_MINIMAL_PNG");
     if (icon_data.valid()) icon_image = dd->image_create_texture(icon_data.pixels, static_cast<uint32_t>(icon_data.width), static_cast<uint32_t>(icon_data.height), "editor_logo");
     ImageIO::free_image(icon_data);
 
@@ -18,7 +18,7 @@ Error EditorResources::initialize(drivers::DeviceDriverVulkan& r_dd)
     if (logo_data.valid()) logo_image = dd->image_create_texture(logo_data.pixels, static_cast<uint32_t>(logo_data.width), static_cast<uint32_t>(logo_data.height), "editor_logo");
     ImageIO::free_image(logo_data);
 
-    ImageData<uint8_t, 4> test_data = ImageIO::load_from_resource<uint8_t, 4>(L"LOGOS_TEST_THUMBNAIL_PNG");
+    ImageData<uint8_t, 4> test_data = ImageIO::load_from_resource<uint8_t, 4>(L"LOGOS_LOGO_PNG");
     if (test_data.valid()) test_thumbnail = dd->image_create_texture(test_data.pixels, static_cast<uint32_t>(test_data.width), static_cast<uint32_t>(test_data.height), "editor_logo");
     ImageIO::free_image(test_data);
 

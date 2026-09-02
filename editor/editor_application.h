@@ -12,7 +12,7 @@
 #include <core/rendering/render_path/project_manager_render_path.h>
 #include <vector>
 
-namespace ballistic {
+namespace lumen {
 
 struct EditorApplication : Application
 {

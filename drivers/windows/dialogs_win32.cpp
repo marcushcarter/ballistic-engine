@@ -4,7 +4,7 @@
 #include <shobjidl.h>
 #include <filesystem>
 
-namespace ballistic::drivers {
+namespace lumen::drivers {
 
 std::wstring Win32Dialogs::save_file(const wchar_t* p_filter, const wchar_t* p_default_ext)
 {

@@ -5,7 +5,7 @@
 #include <editor/docking/dock_well.h>
 #include <editor/docking/panel.h>
 
-namespace ballistic {
+namespace lumen {
 
 struct Editor
 {

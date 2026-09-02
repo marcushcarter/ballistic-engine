@@ -4,7 +4,7 @@
 #include <string_view>
 #include <filesystem>
 
-namespace ballistic {
+namespace lumen {
 
 enum class AssetType : uint32_t {
     None = 0,
