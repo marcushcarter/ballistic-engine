@@ -2,9 +2,10 @@
 #include <core/project/project.h>
 #include <core/assets/asset_common.h>
 #include <editor/assets/asset_import_tracker.h>
+#include <editor/assets/write_atomic.h>
 #include <editor/editor_context.h>
 #include <core/project/project.h>
-#include <core/assets/btexture.h>
+#include <core/assets/ltexture.h>
 #include <core/io/image_io.h>
 #include <core/base/tasks.h>
 #include <drivers/toml/toml_helpers.h>
@@ -69,21 +70,6 @@ static FormatMap map_format(uint8_t p_channels, bool p_srgb)
     }
 }
 
-static bool write_file_atomic(const std::filesystem::path& p_path, const void* p_data, size_t p_size)
-{
-    std::filesystem::path tmp = p_path; tmp += ".tmp";
-    {
-        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-        if (!out) return false;
-        out.write(static_cast<const char*>(p_data), static_cast<std::streamsize>(p_size));
-        if (!out) return false;
-    }
-    std::error_code ec;
-    std::filesystem::rename(tmp, p_path, ec);
-    if (ec) { std::filesystem::remove(tmp, ec); return false; }
-    return true;
-}
-
 Error TextureCooker::_cook(const Job& p_job)
 {
     using enum Error;
@@ -142,16 +128,16 @@ Error TextureCooker::_cook(const Job& p_job)
         report(0.1f + 0.8f * (float)(m + 1) / (float)mip_count);
     }
 
-    BTexturePayloadHeader ph{};
+    LTexturePayloadHeader ph{};
     ph.vk_format = fmt.vk;
     ph.width = width;
     ph.height = height;
     ph.mip_count = mip_count;
     ph.flags = fmt.srgb ? TEXTURE_FLAG_SRGB : 0u;
 
-    BAssetHeader ah{};
+    LAssetHeader ah{};
     ah.magic = BCON_MAGIC;
-    ah.version = BASSET_VERSION;
+    ah.version = LASSET_VERSION;
     ah.guid = p_job.guid;
     ah.type = AssetType::Texture;
     ah.payload_size = static_cast<uint32_t>(sizeof(ph) + blocks.size());
@@ -171,17 +157,19 @@ Error TextureCooker::_cook(const Job& p_job)
 
     toml::table tbl {
         { "asset", toml::table{
-            { "version", static_cast<int64_t>(BASSET_VERSION) },
+            { "version", static_cast<int64_t>(LASSET_VERSION) },
             { "guid", p_job.guid.to_string() },
             { "type", static_cast<int64_t>(AssetType::Texture) } }},
         { std::string(asset_type_section(AssetType::Texture)), toml::table{
             { "path", p_job.source.generic_string() },
+            { "width", static_cast<int64_t>(width) },
+            { "height", static_cast<int64_t>(width) },
             { "channels", static_cast<int64_t>(channels) },
             { "srgb", p_job.settings.srgb },
             { "generate_mips", p_job.settings.generate_mips } }},
     };
     std::string text; { std::ostringstream ss; ss << tbl; text = ss.str(); }
-    if (!write_file_atomic(p_job.dest_btexture, text.data(), text.size())) return Failed;
+    if (!write_file_atomic(p_job.dst_ltexture, text.data(), text.size())) return Failed;
 
     report(1.0f);
     return Ok;
@@ -192,7 +180,7 @@ Error TextureCooker::import(const Project& p_project, const std::filesystem::pat
     using enum Error;
     Job job;
     job.source = p_src;
-    job.dest_btexture = p_dst;
+    job.dst_ltexture = p_dst;
     job.settings = p_settings;
     if (AssetImportTracker::resolve_import(p_project, AssetType::Texture, p_dst, job.guid, job.content_bin) != Ok) return Failed;
     if (_cook(job) != Ok) return Failed;
@@ -204,7 +192,7 @@ void TextureCooker::import_async(EditorContext& ctx, const std::filesystem::path
 {
     Job job;
     job.source = p_src;
-    job.dest_btexture = p_dst;
+    job.dst_ltexture = p_dst;
     job.settings = p_settings;
     if (AssetImportTracker::resolve_import(*ctx.project, AssetType::Texture, p_dst, job.guid, job.content_bin) != Error::Ok) {
         log_write("Texture import failed: %s", p_src.string().c_str());

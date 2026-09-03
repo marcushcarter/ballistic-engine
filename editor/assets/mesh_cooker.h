@@ -7,13 +7,13 @@ namespace lumen {
 struct Project;
 struct EditorContext;
 
-struct TextureCooker
+struct MeshCooker
 {
-    struct CookSettings { bool srgb = true; bool generate_mips = true; };
+    struct CookSettings { bool dag = true; };
 
     struct Job {
         std::filesystem::path source;
-        std::filesystem::path dst_ltexture;
+        std::filesystem::path dst_lmesh;
         std::filesystem::path content_bin;
         Guid guid;
         CookSettings settings;

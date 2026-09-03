@@ -8,7 +8,7 @@ enum TextureFlags : uint32_t {
     TEXTURE_FLAG_NORMAL_MAP = 1u << 1,
 };
 
-struct BTexturePayloadHeader {
+struct LTexturePayloadHeader {
     uint32_t vk_format;
     uint32_t width;
     uint32_t height;
@@ -17,7 +17,7 @@ struct BTexturePayloadHeader {
     uint32_t _pad;
 };
 
-static_assert(sizeof(BTexturePayloadHeader) == 24, "BTexturePayloadHeader layout changed");
-static_assert(std::is_trivially_copyable_v<BTexturePayloadHeader>, "must be blittable");
+static_assert(sizeof(LTexturePayloadHeader) == 24, "LTexturePayloadHeader layout changed");
+static_assert(std::is_trivially_copyable_v<LTexturePayloadHeader>, "must be blittable");
 
 }

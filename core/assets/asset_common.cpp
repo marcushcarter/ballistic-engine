@@ -19,13 +19,13 @@ AssetInfo read_asset_info(const std::filesystem::path& p_path)
     return info;
 }
 
-bool read_asset_header(const std::filesystem::path& p_path, BAssetHeader& r_header)
+bool read_asset_header(const std::filesystem::path& p_path, LAssetHeader& r_header)
 {
     std::ifstream f(p_path, std::ios::binary);
     if (!f) return false;
     f.read(reinterpret_cast<char*>(&r_header), sizeof(r_header));
     if (!f || f.gcount() != (std::streamsize)sizeof(r_header)) return false;
-    return r_header.magic == BCON_MAGIC && r_header.version == BASSET_VERSION;
+    return r_header.magic == BCON_MAGIC && r_header.version == LASSET_VERSION;
 }
 
 }

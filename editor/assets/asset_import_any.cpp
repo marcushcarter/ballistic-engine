@@ -1,5 +1,6 @@
 #include <editor/assets/asset_import_any.h>
 #include <editor/assets/texture_cooker.h>
+#include <editor/assets/mesh_cooker.h>
 #include <algorithm>
 #include <string>
 
@@ -15,7 +16,9 @@ static std::string lower_ext(const std::filesystem::path& p)
 bool is_importable(const std::filesystem::path& p_src)
 {
     const std::string e = lower_ext(p_src);
-    return e == ".png" || e == ".jpg" || e == ".jpeg" || e == ".tga" || e == ".bmp";
+    return
+        e == ".png" || e == ".jpg" || e == ".jpeg" || e == ".tga" || e == ".bmp" || // images
+        e == ".fbx" || e == ".gltf" || e == ".glb" || e == ".obj" || e == ".dae" || e == ".stl" || e == ".ply" || e == ".3ds" || e == ".blend"; // models
 }
 
 bool asset_import_any(EditorContext& ctx, const std::filesystem::path& p_src, const std::filesystem::path& p_dst)
@@ -23,8 +26,14 @@ bool asset_import_any(EditorContext& ctx, const std::filesystem::path& p_src, co
     const std::string e = lower_ext(p_src);
 
     if (e == ".png" || e == ".jpg" || e == ".jpeg" || e == ".tga" || e == ".bmp") {
-        const std::filesystem::path dst = p_dst / (p_src.stem().wstring() + L".btexture");
+        const std::filesystem::path dst = p_dst / (p_src.stem().wstring() + L".ltexture");
         TextureCooker::import_async(ctx, p_src, dst);
+        return true;
+    }
+
+    if (e == ".fbx" || e == ".gltf" || e == ".glb" || e == ".obj" || e == ".dae" || e == ".stl" || e == ".ply" || e == ".3ds" || e == ".blend") {
+        const std::filesystem::path dst = p_dst / (p_src.stem().wstring() + L".lmesh");
+        MeshCooker::import_async(ctx, p_src, dst);
         return true;
     }
 

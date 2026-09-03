@@ -28,7 +28,7 @@ void AssetBrowserGrid::_delete_folder(const Project& p_project, const std::files
     for (auto it = std::filesystem::recursive_directory_iterator(p_folder, ec); it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
         if (ec) break;
         if (it->is_directory(ec)) continue;
-        if (it->path().extension() != ".btexture") continue;
+        if (it->path().extension() != ".ltexture") continue;
         _delete_content(p_project, it->path());
     }
     Paths::remove_to_recycle(p_folder);
@@ -189,11 +189,9 @@ void AssetBrowserGrid::draw(EditorContext& ctx, std::filesystem::path& selected,
             VkDescriptorSet set = VK_NULL_HANDLE;
             if (!entry.is_directory()) {
                 VkImageView view = VK_NULL_HANDLE;
-                if (entry.path().extension() == ".btexture" && ctx.renderer) {
-                    if (const BTexture* bt = ctx.renderer->textures.get(_resolve_texture_guid(entry.path()))) view = bt->image.image_view;
+                if (entry.path().extension() == ".ltexture" && ctx.renderer) {
+                    if (const LTexture* bt = ctx.renderer->textures.get(_resolve_texture_guid(entry.path()))) view = bt->image.image_view;
                 }
-
-                // if (view == VK_NULL_HANDLE) view = ctx.resources->test_thumbnail.image_view;
 
                 set = ctx.imgui->texture_cache.get(view);
             }

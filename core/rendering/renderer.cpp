@@ -33,6 +33,8 @@ Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
 
     err = textures.initialize(r_dd);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
+    err = geometry.initialize(r_dd);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     set_size(1, 1);
     pending_width = width;
@@ -57,6 +59,9 @@ void Renderer::shutdown()
 Error Renderer::load(const std::filesystem::path& p_content_dir)
 {
     using enum Error;
+    
+    Error err = geometry.allocate();
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     std::error_code ec;
     if (!std::filesystem::exists(p_content_dir, ec)) return Ok;
@@ -65,11 +70,14 @@ Error Renderer::load(const std::filesystem::path& p_content_dir)
         if (!it->is_regular_file(ec)) continue;
         const std::filesystem::path& path = it->path();
         if (path.extension() != ".bin") continue;
-        BAssetHeader ah{};
+        LAssetHeader ah{};
         if (!read_asset_header(path, ah)) continue;
         switch (ah.type) {
             case AssetType::Texture:
                 textures.load(ah.guid, path);
+                break;
+            case AssetType::Mesh:
+                geometry.load(ah.guid, path);
                 break;
             default:
                 break;
@@ -82,6 +90,7 @@ Error Renderer::load(const std::filesystem::path& p_content_dir)
 void Renderer::unload()
 {
     textures.clear();
+    geometry.free();
 }
 
 Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
@@ -129,6 +138,7 @@ Error Renderer::begin_frame()
 
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
 
     return Ok;
 }

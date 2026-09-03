@@ -18,7 +18,7 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName",     "Lumen Games"
-            VALUE "FileDescription", "Lumen Editor"
+            VALUE "FileDescription", "Lumen Engine"
             VALUE "FileVersion",     LUMEN_VERSION_NUMBER
             VALUE "ProductVersion",  LUMEN_VERSION_FULL_BUILD
             VALUE "ProductName",     LUMEN_VERSION_NAME

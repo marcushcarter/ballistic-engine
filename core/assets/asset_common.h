@@ -8,14 +8,16 @@ namespace lumen {
 
 enum class AssetType : uint32_t {
     None = 0,
-    Texture = 1,
+    Texture,
+    Mesh,
 };
 
-inline constexpr uint32_t BASSET_VERSION = 1;
+inline constexpr uint32_t LASSET_VERSION = 1;
 
 inline AssetType asset_type_from_u32(uint32_t p_v) {
     switch (p_v) {
         case static_cast<uint32_t>(AssetType::Texture):  return AssetType::Texture;
+        case static_cast<uint32_t>(AssetType::Mesh):  return AssetType::Mesh;
         default: return AssetType::None;
     }
 }
@@ -23,6 +25,7 @@ inline AssetType asset_type_from_u32(uint32_t p_v) {
 inline std::string_view asset_type_section(AssetType p_type) {
     switch (p_type) {
         case AssetType::Texture: return "texture";
+        case AssetType::Mesh: return "mesh";
         default: return "None";
     }
 }
@@ -36,7 +39,7 @@ struct AssetInfo {
 
 inline constexpr uint32_t BCON_MAGIC = uint32_t('B') | (uint32_t('C') << 8) | (uint32_t('O') << 16) | (uint32_t('N') << 24);
 
-struct BAssetHeader {
+struct LAssetHeader {
     uint32_t magic;
     uint32_t version;
     Guid guid;
@@ -44,9 +47,9 @@ struct BAssetHeader {
     uint32_t payload_size;
 };
 static_assert(sizeof(Guid) == 8, "header assumes 8-byte Guid");
-static_assert(sizeof(BAssetHeader) == 24, "BAssetHeader layout changed");
+static_assert(sizeof(LAssetHeader) == 24, "LAssetHeader layout changed");
 
 AssetInfo read_asset_info(const std::filesystem::path& p_path);
-bool read_asset_header(const std::filesystem::path& p_path, BAssetHeader& r_header);
+bool read_asset_header(const std::filesystem::path& p_path, LAssetHeader& r_header);
 
 }

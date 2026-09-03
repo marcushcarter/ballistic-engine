@@ -1,6 +1,6 @@
 #include <core/rendering/resources/texture_cache.h>
 #include <core/assets/asset_common.h>
-#include <core/assets/btexture.h>
+#include <core/assets/ltexture.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <fstream>
 
@@ -22,7 +22,7 @@ uint32_t TextureCache::load(Guid p_guid, const std::filesystem::path& p_path)
 
     const std::streamsize file_size = f.tellg();
     f.seekg(0);
-    if (file_size < (std::streamsize)(sizeof(BAssetHeader) + sizeof(BTexturePayloadHeader))) {
+    if (file_size < (std::streamsize)(sizeof(LAssetHeader) + sizeof(LTexturePayloadHeader))) {
         log_write("TextureCache: %s too small", p_path.string().c_str());
         return UINT32_MAX;
     }
@@ -31,14 +31,14 @@ uint32_t TextureCache::load(Guid p_guid, const std::filesystem::path& p_path)
     f.read(reinterpret_cast<char*>(bytes.data()), file_size);
     if (!f) { log_write("TextureCache: read failed %s", p_path.string().c_str()); return UINT32_MAX; }
 
-    BAssetHeader ah{};
+    LAssetHeader ah{};
     std::memcpy(&ah, bytes.data(), sizeof(ah));
-    if (ah.magic != BCON_MAGIC || ah.version != BASSET_VERSION || ah.type != AssetType::Texture) {
+    if (ah.magic != BCON_MAGIC || ah.version != LASSET_VERSION || ah.type != AssetType::Texture) {
         log_write("TextureCache: bad asset header %s", p_path.string().c_str());
         return UINT32_MAX;
     }
 
-    BTexturePayloadHeader ph{};
+    LTexturePayloadHeader ph{};
     std::memcpy(&ph, bytes.data() + sizeof(ah), sizeof(ph));
 
     if (ah.payload_size < sizeof(ph)) {
@@ -53,7 +53,7 @@ uint32_t TextureCache::load(Guid p_guid, const std::filesystem::path& p_path)
         return UINT32_MAX;
     }
 
-    drivers::DeviceDriverVulkan::Image img = dd->image_create_texture_compressed((VkFormat)ph.vk_format, ph.width, ph.height, ph.mip_count, bytes.data() + payload_off, (VkDeviceSize)blocks_size, "btexture");
+    drivers::DeviceDriverVulkan::Image img = dd->image_create_texture_compressed((VkFormat)ph.vk_format, ph.width, ph.height, ph.mip_count, bytes.data() + payload_off, (VkDeviceSize)blocks_size, "ltexture");
     if (img.image == VK_NULL_HANDLE) {
         log_write("TextureCache: upload failed %s", p_path.string().c_str());
         return UINT32_MAX;
@@ -62,14 +62,14 @@ uint32_t TextureCache::load(Guid p_guid, const std::filesystem::path& p_path)
     uint32_t slot;
     if (!free_slots.empty()) {
         slot = free_slots.back(); free_slots.pop_back();
-        slots[slot] = BTexture{ p_guid, img };
+        slots[slot] = LTexture{ p_guid, img };
     } else {
         slot = (uint32_t)slots.size();
-        slots.push_back(BTexture{ p_guid, img });
+        slots.push_back(LTexture{ p_guid, img });
     }
     by_guid.emplace(p_guid, slot);
 
-    log_write("TextureCache: loaded %ux%u %s (mips=%u) slot=%u bindless=%u %s", img.extent.width, img.extent.height, string_VkFormat(img.format), img.mip_levels, slot, img.bindless_sampled, p_path.string().c_str());
+    log_write("TextureCache: loaded %s %ux%u %s (mips=%u) slot=%u bindless=%u", img.bindless_sampled, p_path.string().c_str(), img.extent.width, img.extent.height, string_VkFormat(img.format), img.mip_levels, slot, img.bindless_sampled);
     return slot;
 }
 
@@ -79,7 +79,7 @@ void TextureCache::unload(Guid p_guid)
     if (it == by_guid.end()) return;
     const uint32_t slot = it->second;
     dd->image_free(slots[slot].image);
-    slots[slot] = BTexture{};
+    slots[slot] = LTexture{};
     free_slots.push_back(slot);
     by_guid.erase(it);
 }

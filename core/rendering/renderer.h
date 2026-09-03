@@ -2,6 +2,7 @@
 #include <drivers/vulkan/device_driver_vulkan.h>
 #include <core/rendering/render_graph.h>
 #include <core/rendering/resources/texture_cache.h>
+#include <core/rendering/resources/geometry_pool.h>
 #include <core/base/error.h>
 
 namespace lumen {
@@ -13,6 +14,7 @@ struct Renderer
     RenderGraph graph;
     
     TextureCache textures;
+    GeometryPool geometry;
 
     uint32_t width = 0;
     uint32_t height = 0;

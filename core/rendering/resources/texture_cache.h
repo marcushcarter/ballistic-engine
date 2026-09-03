@@ -9,7 +9,7 @@
 
 namespace lumen {
 
-struct BTexture {
+struct LTexture {
     Guid guid;
     drivers::DeviceDriverVulkan::Image image;
 };
@@ -18,7 +18,7 @@ struct TextureCache
 {
     drivers::DeviceDriverVulkan* dd = nullptr;
 
-    std::vector<BTexture> slots;
+    std::vector<LTexture> slots;
     std::vector<uint32_t> free_slots;
     std::unordered_map<Guid, uint32_t, GuidHash, GuidEq> by_guid;
 
@@ -28,13 +28,13 @@ struct TextureCache
     void unload(Guid p_guid);
     void clear();
 
-    const BTexture* get(Guid p_guid) const {
+    const LTexture* get(Guid p_guid) const {
         auto it = by_guid.find(p_guid);
         return it == by_guid.end() ? nullptr : &slots[it->second];
     }
 
     uint32_t bindless_of(Guid p_guid) const {
-        const BTexture* t = get(p_guid);
+        const LTexture* t = get(p_guid);
         return t ? t->image.bindless_sampled : UINT32_MAX;
     }
 };
