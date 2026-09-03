@@ -18,7 +18,7 @@ void CenterView::_draw_scene(EditorContext& ctx)
     ImVec2 pos = ImGui::GetCursorScreenPos();
 
     if (!ImGui::IsAnyItemActive()) {
-        ctx.renderer->request_size((uint32_t)size.x, (uint32_t)size.y);
+        ctx.renderer->request_size((uint32_t)(size.x * screen_percentage), (uint32_t)(size.y * screen_percentage));
     }
 
     if (!source_resolved) {
@@ -43,10 +43,15 @@ void CenterView::_draw_scene(EditorContext& ctx)
     }
 
     left_overlay.begin(pos, size, OverlayBar::Align::Left);
-    if (left_overlay.button(ICON_FA_BARS)) {}
-    if (left_overlay.button(ICON_FA_CUBE " Perspective")) {}
-    if (left_overlay.button(ICON_FA_ADDRESS_BOOK " Lit")) {}
-    if (left_overlay.button("Show")) {}
+    if (left_overlay.begin_menu(ICON_FA_BARS)) {
+        ImGui::SeparatorText("VIEWPORT OPTIONS");
+        ImGui::Separator();
+        ImGui::SliderFloat("Screen Percentage", &screen_percentage, 0.01f, 1.0f);
+        left_overlay.end_menu();
+    }
+    // if (left_overlay.button(ICON_FA_CUBE " Perspective")) {}
+    // if (left_overlay.button(ICON_FA_ADDRESS_BOOK " Lit")) {}
+    // if (left_overlay.button("Show")) {}
     left_overlay.end();
 
     const char* src_label = "(no source)";
@@ -55,7 +60,6 @@ void CenterView::_draw_scene(EditorContext& ctx)
         if (it != ctx.renderer->graph.debug_names.end()) src_label = it->second.c_str();
     }
 
-    // static bool gizmo_rotate = false, gizmo_move = false;
     right_overlay.begin(pos, size, OverlayBar::Align::Right);
     if (right_overlay.combo("##viewport_source", src_label, 160.0f)) {
         bool any = false;
@@ -70,8 +74,6 @@ void CenterView::_draw_scene(EditorContext& ctx)
 
         ImGui::EndCombo();
     }
-    // right_overlay.toggle(ICON_FA_ARROWS_ROTATE "##rot", gizmo_rotate, ImVec2(24,24));
-    // right_overlay.toggle(ICON_FA_UP_DOWN_LEFT_RIGHT "##mov", gizmo_move, ImVec2(24,24));
     right_overlay.end();
 }
 

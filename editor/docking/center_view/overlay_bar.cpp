@@ -93,10 +93,61 @@ bool OverlayBar::combo(const char* p_id, const char* p_preview, float p_width)
     ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(28, 28, 30, 130));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, IM_COL32(60, 62, 66, 190));
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, IM_COL32(80, 82, 88, 220));
-    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(24, 24, 26, 150));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(24, 24, 26, 255));
     const bool open = ImGui::BeginCombo(p_id, p_preview, ImGuiComboFlags_HeightLargest);
     ImGui::PopStyleColor(4);
     return open;
+}
+
+bool OverlayBar::begin_menu(const char* p_label, ImVec2 p_size)
+{
+    const ImVec2 fp = ImGui::GetStyle().FramePadding;
+    float w = p_size.x, h = p_size.y;
+    if (w <= 0.0f) w = ImGui::CalcTextSize(p_label, nullptr, true).x + fp.x * 2.0f;
+    if (h <= 0.0f) h = ImGui::GetFrameHeight();
+
+    float x;
+    if (align == Align::Left) {
+        x = cursor_x;
+        cursor_x += w + spacing;
+    } else {
+        cursor_x -= w;
+        x = cursor_x;
+        cursor_x -= spacing;
+    }
+
+    ImGui::SetCursorScreenPos(ImVec2(x, row_y));
+
+    int pushed = 0;
+    if (ImGui::IsPopupOpen(p_label)) { ImGui::PushStyleColor(ImGuiCol_Button, active_col); ++pushed; }
+    const bool clicked = ImGui::Button(p_label, ImVec2(w, h));
+    if (pushed) ImGui::PopStyleColor(pushed);
+
+    const ImVec2 bmin = ImGui::GetItemRectMin();
+    const ImVec2 bmax = ImGui::GetItemRectMax();
+    if (clicked) ImGui::OpenPopup(p_label);
+
+    ImGui::SetNextWindowPos(ImVec2(bmin.x, bmax.y + 2.0f));
+
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, IM_COL32(24, 24, 26, 255));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(60, 62, 66, 190));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(80, 82, 88, 220));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f, 4.0f));
+
+    if (ImGui::BeginPopup(p_label)) {
+        return true;
+    }
+
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(3);
+    return false;
+}
+
+void OverlayBar::end_menu()
+{
+    ImGui::EndPopup();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(3);
 }
 
 void OverlayBar::gap(float p_w)

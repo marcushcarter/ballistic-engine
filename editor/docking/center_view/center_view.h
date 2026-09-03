@@ -16,6 +16,7 @@ struct CenterView
     uint64_t selected_name_id = 0;
     bool source_resolved = false;
     float split_ratio = 0.66f;
+    float screen_percentage = 1.0f;
 
     void initialize();
     

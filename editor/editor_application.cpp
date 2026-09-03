@@ -153,10 +153,10 @@ void EditorApplication::_load_state()
     if ((int)lv["version"].value_or((int64_t)-1) == Editor::VERSION) {
         editor.split_x = (float)lv["split_x"].value_or((double)editor.split_x);
         editor.split_y = (float)lv["split_y"].value_or((double)editor.split_y);
-        editor.center_view.split_ratio        = (float)lv["center_split"].value_or((double)editor.center_view.split_ratio);
+        editor.center_view.split_ratio = (float)lv["center_split"].value_or((double)editor.center_view.split_ratio);
         editor.center_view.debugger.collapsed = lv["center_collapsed"].value_or(editor.center_view.debugger.collapsed);
-        editor.center_view.debugger.active    = (int)lv["center_tab"].value_or((int64_t)editor.center_view.debugger.active);
-        editor.right_top.active_name    = lv["active_top"].value_or(std::string{});
+        editor.center_view.debugger.active = (int)lv["center_tab"].value_or((int64_t)editor.center_view.debugger.active);
+        editor.right_top.active_name = lv["active_top"].value_or(std::string{});
         editor.right_bottom.active_name = lv["active_bottom"].value_or(std::string{});
 
         if (const toml::table* pans = tbl.at_path("panels").as_table()) {
@@ -176,7 +176,9 @@ void EditorApplication::_load_state()
 
     if (auto v = tbl.at_path("window.custom_titlebar").value<bool>()) win32.window_set_custom_titlebar(*v);
 
-    renderer.graph.profiler.enabled = tbl.at_path("debugger.profiler.enabled").value_or(renderer.graph.profiler.enabled);
+    // viewport resolution
+
+    renderer.graph.profiler.enabled = tbl.at_path("debugger.profiler_enabled").value_or(renderer.graph.profiler.enabled);
 
     settings.theme.apply();
 }
@@ -195,11 +197,11 @@ void EditorApplication::_save_state()
     toml::table window;
     window.insert_or_assign("custom_titlebar", static_cast<bool>(win32.window.custom_titlebar));
     
-    toml::table profiler;
-    profiler.insert_or_assign("enabled", static_cast<bool>(renderer.graph.profiler.enabled));
+    toml::table viewport;
+    viewport.insert_or_assign("screen_percentage", (double)editor.center_view.screen_percentage);
     
     toml::table debugger;
-    debugger.insert_or_assign("profiler", std::move(profiler));
+    debugger.insert_or_assign("profiler_enabled", static_cast<bool>(renderer.graph.profiler.enabled));
 
     toml::table layout;
     layout.insert_or_assign("version", (int64_t)Editor::VERSION);
@@ -222,8 +224,8 @@ void EditorApplication::_save_state()
     toml::table root;
     root.insert_or_assign("theme", std::move(theme));
     root.insert_or_assign("window", std::move(window));
+    root.insert_or_assign("window", std::move(viewport));
     root.insert_or_assign("debugger", std::move(debugger));
-    
     root.insert_or_assign("layout", std::move(layout));
     root.insert_or_assign("panels", std::move(panels));
 
