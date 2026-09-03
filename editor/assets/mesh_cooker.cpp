@@ -34,7 +34,6 @@ Error MeshCooker::_cook(const Job& p_job)
 
     // push mesh data
     for (uint32_t i = 0; i < 100000000; i++) {
-        i = i;
         report(0.1f + 0.8f * (float)(i + 1) / (float)100000000);
     }
 
