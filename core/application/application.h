@@ -38,6 +38,7 @@ struct Application
     drivers::ImGuiDriver imgui;
 
     Scenes scenes;
+    Scene scene;
 
     Project project;
 

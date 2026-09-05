@@ -49,6 +49,9 @@ Error Application::initialize(const ApplicationCreateInfo& p_create_info)
     render_path->ctx.dd = &dd;
     render_path->ctx.imgui = &imgui;
     render_path->ctx.graph = &renderer.graph;
+    render_path->ctx.textures = &renderer.textures;
+    render_path->ctx.geometry = &renderer.geometry;
+    render_path->ctx.persistent = &renderer.persistent;
     err = render_path->create_resources();
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
@@ -105,7 +108,7 @@ int Application::run()
         renderer.apply_pending_size();
 
         imgui.begin_frame(renderer.frame_number, renderer.frame_count, renderer.resize_epoch);
-        renderer.begin_frame();
+        renderer.begin_frame(scene);
         
         render_path->build(renderer.graph);
         renderer.compile();

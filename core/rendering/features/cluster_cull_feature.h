@@ -3,10 +3,11 @@
 
 namespace lumen {
 
-struct GeometryFeature : Feature
+struct ClusterCullFeature : Feature
 {    
-    RenderGraph::Pass geometry_pass;
-    drivers::DeviceDriverVulkan::Pipeline triangle_pipeline;
+    RenderGraph::Pass instance_cull_pass;
+    
+    drivers::DeviceDriverVulkan::Pipeline instance_cull_pipe;
 
     Error create_resources() override;
     Error create_pipelines() override;

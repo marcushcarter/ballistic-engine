@@ -3,6 +3,9 @@
 namespace lumen {
 
 struct RenderGraph;
+struct PersistentResources;
+struct TextureCache;
+struct GeometryPool;
 namespace drivers { struct DeviceDriverVulkan; struct ImGuiDriver; }
 
 struct RenderContext
@@ -10,6 +13,9 @@ struct RenderContext
     drivers::DeviceDriverVulkan* dd = nullptr;
     drivers::ImGuiDriver* imgui = nullptr;
     RenderGraph* graph = nullptr;
+    TextureCache* textures = nullptr;
+    GeometryPool* geometry = nullptr;
+    PersistentResources* persistent = nullptr;
 };
 
 }

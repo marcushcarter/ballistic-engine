@@ -2526,16 +2526,38 @@ DeviceDriverVulkan::Pipeline DeviceDriverVulkan::graphics_pipeline_create(const 
 
 DeviceDriverVulkan::Pipeline DeviceDriverVulkan::compute_pipeline_create(const ComputePipelineCreateInfo& p_ci)
 {
-    using enum Error;
+    // using enum Error;
     
+    // LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");
+
+    // VkComputePipelineCreateInfo pipeline_ci{};
+    
+    // Pipeline pipeline;
+    // pipeline.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+    // VkResult err = vkCreateComputePipelines(device, pipeline_cache, 1, &pipeline_ci, nullptr, &pipeline.pipeline);
+    // LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
+
+    // set_object_name(VK_OBJECT_TYPE_PIPELINE, (uint64_t)pipeline.pipeline, p_ci.name);
+    // return pipeline;
+
+
+    using enum Error;
+
     LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");
 
-    VkComputePipelineCreateInfo pipeline_ci{};
-    
+    VkPipelineShaderStageCreateInfo stage{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stage.module = p_ci.compute_shader;
+    stage.pName = "main";
+
+    VkComputePipelineCreateInfo pipeline_ci{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    pipeline_ci.stage = stage;
+    pipeline_ci.layout = bindless_heap.pipeline_layout;
+
     Pipeline pipeline;
     pipeline.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
     VkResult err = vkCreateComputePipelines(device, pipeline_cache, 1, &pipeline_ci, nullptr, &pipeline.pipeline);
-    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
+    LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan compute pipeline.");
 
     set_object_name(VK_OBJECT_TYPE_PIPELINE, (uint64_t)pipeline.pipeline, p_ci.name);
     return pipeline;

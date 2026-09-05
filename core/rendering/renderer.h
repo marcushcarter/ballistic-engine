@@ -3,9 +3,12 @@
 #include <core/rendering/render_graph.h>
 #include <core/rendering/resources/texture_cache.h>
 #include <core/rendering/resources/geometry_pool.h>
+#include <core/rendering/resources/persistent_resources.h>
 #include <core/base/error.h>
 
 namespace lumen {
+
+struct Scene;
 
 struct Renderer
 {
@@ -15,6 +18,7 @@ struct Renderer
     
     TextureCache textures;
     GeometryPool geometry;
+    PersistentResources persistent;
 
     uint32_t width = 0;
     uint32_t height = 0;
@@ -42,7 +46,8 @@ struct Renderer
     Error apply_pending_size();
     Error set_size(uint32_t p_width, uint32_t p_height);
 
-    Error begin_frame();
+    void _frame_prepare(const Scene& p_scene);
+    Error begin_frame(const Scene& p_scene);
     void compile();
     Error record();
     Error end_frame();
