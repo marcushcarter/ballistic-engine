@@ -18,6 +18,21 @@
 
 namespace lumen {
 
+using namespace glm;
+
+struct MeshSource {
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    std::vector<uint32_t> tri_slots;
+    std::vector<uint32_t> slot_table;
+    std::vector<SkinVertex> skin_vertices;
+    std::vector<Cluster> clusters;
+    std::vector<BVHNode> bvh_nodes;
+    vec3 pos_min, pos_extent;
+    vec2 uv_min, uv_extent;
+    vec4 bounds_sphere;
+};
+
 Error MeshCooker::_cook(const Job& p_job)
 {
     using enum Error;
@@ -29,65 +44,67 @@ Error MeshCooker::_cook(const Job& p_job)
         
     report(0.1f);
 
-    bool skinned = false;
-    // setup mesh data (clusters)
+    MeshSource src;
 
-    // push mesh data
-    for (uint32_t i = 0; i < 100000000; i++) {
-        report(0.1f + 0.8f * (float)(i + 1) / (float)100000000);
+    if (p_job.settings.dag) {
+
+    } else {
+
     }
 
-    std::vector<uint8_t> blocks;
-//     for (uint32_t m = 0; m < mip_count; ++m) {
-//         const uint32_t mw = dims[m].first, mh = dims[m].second;
-//         utils::image_u8 src(mw, mh);
-//         const std::vector<uint8_t>& buf = mips[m];
-//         for (uint32_t y = 0; y < mh; ++y) for (uint32_t x = 0; x < mw; ++x) {
-//             const uint8_t* px = &buf[(static_cast<size_t>(y) * mw + x) * 4];
-//             src(x, y) = utils::color_quad_u8(px[0], px[1], px[2], px[3]);
-//         }
-//         rdo_bc::rdo_bc_params p;
-//         p.m_dxgi_format = fmt.dxgi;
-//         p.m_bc7_uber_level = 4; // move to 6 to have better compression but takes longer (around 4x)
-//         p.m_perceptual = fmt.srgb;
-//         p.m_rdo_lambda = 0.3f;
-//         p.m_rdo_multithreading = true;
-//         p.m_status_output = false;
-//         if (fmt.bc45) { p.m_bc45_channel0 = 0; p.m_bc45_channel1 = 1; }
+    src.vertices.push_back(Vertex{vec3(0.0f, 0.5f, 0.0f)});
+    src.vertices.push_back(Vertex{vec3(-0.5f, -0.5f, 0.0f)});
+    src.vertices.push_back(Vertex{vec3(0.5f, -0.5f, 0.0f)});
+    src.indices = { 0, 1, 2 };
+    src.tri_slots = { 0 };
+    src.slot_table = { 0, 0, 0 };
+    src.clusters.push_back(Cluster{ 0, 3, vec4(0.0f), vec4(0.0f), vec4(0.0f), vec4(0.0f), 0.0f, 0.0f });
+    src.bvh_nodes.push_back(BVHNode{ vec3(-0.5f, -0.5f, 0.0f), BVH_LEAF_BIT | 0u, vec3(0.5f, 0.5f, 0.0f), 1u });
 
-//         rdo_bc::rdo_bc_encoder enc;
-//         if (!enc.init(src, p)) return Failed;
-//         if (!enc.encode()) return Failed;
-//         const uint8_t* b = static_cast<const uint8_t*>(enc.get_blocks());
-//         blocks.insert(blocks.end(), b, b + enc.get_total_blocks_size_in_bytes());
-
-//         report(0.1f + 0.8f * (float)(m + 1) / (float)mip_count);
-//     }
+    const bool skinned = !src.skin_vertices.empty();
 
     LMeshPayloadHeader ph{};
-//     ph.vk_format = fmt.vk;
-//     ph.width = width;
-//     ph.height = height;
-//     ph.mip_count = mip_count;
+    ph.vertex_count = (uint32_t)src.vertices.size();
+    ph.index_count = (uint32_t)src.indices.size();
+    ph.tri_count = ph.index_count / 3;
+    ph.slot_table_count = (uint32_t)src.slot_table.size();
+    ph.cluster_count = (uint32_t)src.clusters.size();
+    ph.bvh_node_count = (uint32_t)src.bvh_nodes.size();
     ph.flags = skinned ? MESH_FLAG_SKINNED : 0u;
+    ph.pos_min = src.pos_min;
+    ph.pos_extent = src.pos_extent;
+    ph.uv_min = src.uv_min;
+    ph.uv_extent = src.uv_extent;
+    ph.bounds_sphere = src.bounds_sphere;
+
+    const size_t vtx_bytes = src.vertices.size() * sizeof(Vertex);
+    const size_t idx_bytes = src.indices.size() * sizeof(uint32_t);
+    const size_t tri_bytes = src.tri_slots.size() * sizeof(uint32_t);
+    const size_t slot_bytes = src.slot_table.size() * sizeof(uint32_t);
+    const size_t clus_bytes = src.clusters.size() * sizeof(Cluster);
+    const size_t skin_bytes = src.skin_vertices.size() * sizeof(SkinVertex);
+    const size_t bvhn_bytes = src.bvh_nodes.size() * sizeof(BVHNode);
 
     LAssetHeader ah{};
     ah.magic = BCON_MAGIC;
     ah.version = LASSET_VERSION;
     ah.guid = p_job.guid;
     ah.type = AssetType::Mesh;
-    ah.payload_size = static_cast<uint32_t>(sizeof(ph) + blocks.size());
-
-    std::vector<uint8_t> bin;
-    bin.reserve(sizeof(ah) + sizeof(ph) + blocks.size());
-    auto append = [&](const void* d, size_t n){ const uint8_t* p = static_cast<const uint8_t*>(d); bin.insert(bin.end(), p, p + n); };
-    append(&ah, sizeof(ah));
-    append(&ph, sizeof(ph));
-    append(blocks.data(), blocks.size());
+    ah.payload_size = (uint32_t)(sizeof(ph) + vtx_bytes + idx_bytes + tri_bytes + slot_bytes + clus_bytes + skin_bytes + bvhn_bytes);
 
     std::error_code ec;
     std::filesystem::create_directories(p_job.content_bin.parent_path(), ec);
-    if (!write_file_atomic(p_job.content_bin, bin.data(), bin.size())) return Failed;
+    std::ofstream f(p_job.content_bin, std::ios::binary | std::ios::trunc);
+    if (!f) { return Failed; }
+    f.write(reinterpret_cast<const char*>(&ah), sizeof(ah));
+    f.write(reinterpret_cast<const char*>(&ph), sizeof(ph));
+    f.write(reinterpret_cast<const char*>(src.vertices.data()), vtx_bytes);
+    f.write(reinterpret_cast<const char*>(src.indices.data()), idx_bytes);
+    if (tri_bytes) f.write(reinterpret_cast<const char*>(src.tri_slots.data()), tri_bytes);
+    if (slot_bytes) f.write(reinterpret_cast<const char*>(src.slot_table.data()), slot_bytes);
+    if (clus_bytes) f.write(reinterpret_cast<const char*>(src.clusters.data()), clus_bytes);
+    if (skin_bytes) f.write(reinterpret_cast<const char*>(src.skin_vertices.data()), skin_bytes);
+    if (bvhn_bytes) f.write(reinterpret_cast<const char*>(src.bvh_nodes.data()), bvhn_bytes);
 
     report(0.95f);
 

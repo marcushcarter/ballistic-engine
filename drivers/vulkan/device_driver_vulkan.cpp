@@ -235,6 +235,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingVariableDescriptorCount, Failed, "GPU lacks descriptorBindingVariableDescriptorCount.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderSampledImageArrayNonUniformIndexing, Failed, "GPU lacks shaderSampledImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
 
     void* create_info_next = nullptr;
 
@@ -255,6 +256,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     features_1_2.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     features_1_2.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
     features_1_2.separateDepthStencilLayouts = VK_TRUE;
+    features_1_2.scalarBlockLayout = VK_TRUE;
     features_1_2.pNext = create_info_next;
     create_info_next = &features_1_2;
 
@@ -1107,14 +1109,34 @@ DeviceDriverVulkan::Buffer DeviceDriverVulkan::buffer_create(const BufferCreateI
         }
     }
 
+    // bool pooled = false;
+    // const uint32_t pool_type = _pool_memory_type(p_ci.pool);
+    // if (p_ci.pool != nullptr && pool_type != UINT32_MAX) {
+    //     VkDeviceBufferMemoryRequirements dev_req{ VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS };
+    //     dev_req.pCreateInfo = &buffer_ci;
+    //     VkMemoryRequirements2 req2{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
+    //     vkGetDeviceBufferMemoryRequirements(device, &dev_req, &req2);
+    //     pooled = (req2.memoryRequirements.memoryTypeBits & (1u << pool_type)) != 0;
+    // }
+    // if (pooled) alloc_ci.pool = p_ci.pool;
+
+
+
     bool pooled = false;
     const uint32_t pool_type = _pool_memory_type(p_ci.pool);
     if (p_ci.pool != nullptr && pool_type != UINT32_MAX) {
+        VkPhysicalDeviceMemoryProperties mem_props{};
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_props);
+        const VkMemoryPropertyFlags pool_flags = mem_props.memoryTypes[pool_type].propertyFlags;
+
         VkDeviceBufferMemoryRequirements dev_req{ VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS };
         dev_req.pCreateInfo = &buffer_ci;
         VkMemoryRequirements2 req2{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
         vkGetDeviceBufferMemoryRequirements(device, &dev_req, &req2);
-        pooled = (req2.memoryRequirements.memoryTypeBits & (1u << pool_type)) != 0;
+
+        const bool bits_ok = (req2.memoryRequirements.memoryTypeBits & (1u << pool_type)) != 0;
+        const bool props_ok = (pool_flags & alloc_ci.requiredFlags) == alloc_ci.requiredFlags;
+        pooled = bits_ok && props_ok;
     }
     if (pooled) alloc_ci.pool = p_ci.pool;
 
@@ -1208,6 +1230,82 @@ Error DeviceDriverVulkan::buffer_invalidate(Buffer& r_buffer, VkDeviceSize p_off
     if (r_buffer.coherent || !r_buffer.allocation) return Ok;
     VkResult err = vmaInvalidateAllocation(allocator, r_buffer.allocation, p_offset, p_size);
     LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't invalidate buffer allocation.");
+    return Ok;
+}
+
+void DeviceDriverVulkan::command_copy_buffer(VkCommandBuffer p_cmd, const Buffer& p_src, const Buffer& p_dst, VkDeviceSize p_size, VkDeviceSize p_src_offset, VkDeviceSize p_dst_offset)
+{
+    VkBufferCopy region{};
+    region.srcOffset = p_src_offset;
+    region.dstOffset = p_dst_offset;
+    region.size = p_size;
+    vkCmdCopyBuffer(p_cmd, p_src.buffer, p_dst.buffer, 1, &region);
+}
+
+Error DeviceDriverVulkan::buffer_upload_batch(const BufferUpload* p_uploads, uint32_t p_count)
+{
+    using enum Error;
+    if (p_count == 0) return Ok;
+
+    VkDeviceSize total = 0;
+    for (uint32_t i = 0; i < p_count; i++) total += p_uploads[i].size;
+    if (total == 0) return Ok;
+
+    BufferCreateInfo staging_ci{};
+    staging_ci.size = total;
+    staging_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_ci.host_visible = true;
+    staging_ci.pool = upload_pool;
+    staging_ci.name = "buffer_upload_staging";
+    Buffer staging = buffer_create(staging_ci);
+    LUMEN_ERR_FAIL_COND_V_MSG(!staging.buffer, Failed, "Couldn't create upload staging buffer.");
+
+    std::vector<VkDeviceSize> src_offsets(p_count);
+    VkDeviceSize src_off = 0;
+    for (uint32_t i = 0; i < p_count; i++) {
+        src_offsets[i] = src_off;
+        buffer_update(staging, p_uploads[i].data, p_uploads[i].size, src_off);
+        src_off += p_uploads[i].size;
+    }
+    buffer_flush(staging, 0, total);
+
+    CommandPool pool = command_pool_create(cd->graphics_queue_family, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer cmd = command_buffer_create(pool);
+    command_buffer_begin(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    for (uint32_t i = 0; i < p_count; i++) command_copy_buffer(cmd, staging, *p_uploads[i].dst, p_uploads[i].size, src_offsets[i], p_uploads[i].offset);
+
+    // Make the transfer writes available/visible to later shader reads on this queue.
+    VkMemoryBarrier2 mb{ VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+    mb.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+    mb.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    mb.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    mb.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dep.memoryBarrierCount = 1;
+    dep.pMemoryBarriers = &mb;
+    vkCmdPipelineBarrier2(cmd, &dep);
+
+    command_buffer_end(cmd);
+
+    VkCommandBufferSubmitInfo cmd_si{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+    cmd_si.commandBuffer = cmd;
+    VkSubmitInfo2 submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+    submit.commandBufferInfoCount = 1;
+    submit.pCommandBufferInfos = &cmd_si;
+
+    VkFence fence = fence_create(false);
+    vkQueueSubmit2(queue_families[cd->graphics_queue_family][0].queue, 1, &submit, fence);
+    fence_wait(fence, UINT64_MAX);
+
+    fence_free(fence);
+    command_pool_free(pool);
+    buffer_free(staging);
+
+    for (uint32_t i = 0; i < p_count; i++) {
+        p_uploads[i].dst->state.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        p_uploads[i].dst->state.access = VK_ACCESS_2_SHADER_READ_BIT;
+    }
     return Ok;
 }
 
@@ -2065,8 +2163,6 @@ void DeviceDriverVulkan::framebuffer_free(VkFramebuffer& r_framebuffer)
 /**** PIPELINE ****/
 /******************/
 
-// ----- CACHE -----
-
 static uint32_t _read_le_u32(const uint8_t* p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
@@ -2170,8 +2266,6 @@ void DeviceDriverVulkan::pipeline_cache_free()
         pipeline_cache = VK_NULL_HANDLE;
     }
 }
-
-// ----- SHADER -----
 
 shaderc_shader_kind DeviceDriverVulkan::_shaderc_kind(ShaderStage p_stage)
 {
@@ -2281,8 +2375,6 @@ void DeviceDriverVulkan::shader_free(VkShaderModule& r_shader)
         r_shader = VK_NULL_HANDLE;
     }
 }
-
-// ----- PIPELINE -----
 
 VkPipelineColorBlendAttachmentState DeviceDriverVulkan::_blend_state(BlendMode p_mode)
 {

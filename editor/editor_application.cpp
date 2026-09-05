@@ -101,8 +101,20 @@ void EditorApplication::on_update(float p_dt)
     if (project.loaded()) {
         imports.tick();
         for (const auto& c : imports.completed) {
-            renderer.textures.unload(c.guid);
-            renderer.textures.load(c.guid, c.content_bin);
+            LAssetHeader ah{};
+            if (!read_asset_header(c.content_bin, ah)) continue;
+            switch (ah.type) {
+                case AssetType::Texture:
+                    renderer.textures.unload(c.guid);
+                    renderer.textures.load(c.guid, c.content_bin);
+                    break;
+                case AssetType::Mesh:
+                    renderer.geometry.unload(c.guid);
+                    renderer.geometry.load(c.guid, c.content_bin);
+                    break;
+                default:
+                    break;
+            }
         }
         imports.completed.clear();
 

@@ -187,8 +187,21 @@ struct DeviceDriverVulkan
     Error buffer_update(Buffer& r_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset = 0);
     Error buffer_flush(Buffer& r_buffer, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
     Error buffer_invalidate(Buffer& r_buffer, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
+    
+    // ----- STAGED UPLOAD -----
+
+    struct BufferUpload {
+        Buffer* dst = nullptr;
+        const void* data = nullptr;
+        VkDeviceSize size = 0;
+        VkDeviceSize offset = 0;
+    };
+
+    void command_copy_buffer(VkCommandBuffer p_cmd, const Buffer& p_src, const Buffer& p_dst, VkDeviceSize p_size, VkDeviceSize p_src_offset = 0, VkDeviceSize p_dst_offset = 0);
+    Error buffer_upload_batch(const BufferUpload* p_uploads, uint32_t p_count);
 
     void command_copy_image_to_buffer(VkCommandBuffer p_cmd, const Image& p_image, const Buffer& p_buffer, VkExtent2D p_extent);
+
 
     // ----- RING -----
 
