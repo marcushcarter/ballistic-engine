@@ -1,4 +1,5 @@
 #include <drivers/vulkan/device_driver_vulkan.h>
+#include <core/io/embedded_resource.h>
 #include <core/io/path.h>
 #include <vulkan/vulkan.hpp>
 #include <iostream>
@@ -6,6 +7,9 @@
 #include <mutex>
 #include <fstream>
 #include <filesystem>
+#include <memory>
+#include <cctype>
+#include <cstring>
 
 namespace lumen::drivers {
 
@@ -224,7 +228,9 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
 
     VkPhysicalDeviceFeatures2 supported_features2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceVulkan12Features supported_1_2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    VkPhysicalDeviceVulkan11Features supported_1_1{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     supported_features2.pNext = &supported_1_2;
+    supported_1_2.pNext = &supported_1_1;
     vkGetPhysicalDeviceFeatures2(physical_device, &supported_features2);
 
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorIndexing, Failed, "GPU lacks descriptorIndexing, required for bindless rendering.");
@@ -236,6 +242,8 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderSampledImageArrayNonUniformIndexing, Failed, "GPU lacks shaderSampledImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.storageBuffer16BitAccess, Failed, "GPU lacks storageBuffer16BitAccess, required for 16-bit vertex data.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
 
     void* create_info_next = nullptr;
 
@@ -257,8 +265,14 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     features_1_2.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
     features_1_2.separateDepthStencilLayouts = VK_TRUE;
     features_1_2.scalarBlockLayout = VK_TRUE;
+    features_1_2.storageBuffer8BitAccess = VK_TRUE;
     features_1_2.pNext = create_info_next;
     create_info_next = &features_1_2;
+
+    VkPhysicalDeviceVulkan11Features features_1_1{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    features_1_1.storageBuffer16BitAccess = VK_TRUE;
+    features_1_1.pNext = create_info_next;
+    create_info_next = &features_1_1;
 
     // VkPhysicalDeviceShaderFloat16Int8FeaturesKHR shader_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR };
 	// shader_features.shaderFloat16 = shader_capabilities.shader_float16_is_supported;
@@ -2277,7 +2291,7 @@ shaderc_shader_kind DeviceDriverVulkan::_shaderc_kind(ShaderStage p_stage)
     return shaderc_vertex_shader;
 }
 
-uint64_t DeviceDriverVulkan::_shader_cache_key(const ShaderCreateInfo& p_ci, size_t p_source_len)
+uint64_t DeviceDriverVulkan::_shader_cache_key(const void* p_source, size_t p_len, ShaderStage p_stage)
 {
     constexpr uint32_t CACHE_FORMAT = 1;
 
@@ -2288,13 +2302,56 @@ uint64_t DeviceDriverVulkan::_shader_cache_key(const ShaderCreateInfo& p_ci, siz
     };
     auto mix_u32 = [&](uint32_t v) { mix(&v, sizeof(v)); };
 
-    mix(p_ci.glsl, p_source_len);
-    mix_u32(static_cast<uint32_t>(p_ci.stage));
+    mix(p_source, p_len);
+    mix_u32(static_cast<uint32_t>(p_stage));
     mix_u32(CACHE_FORMAT);
     mix_u32(static_cast<uint32_t>(shaderc_env_version_vulkan_1_3));
     mix_u32(static_cast<uint32_t>(shaderc_optimization_level_performance));
     return h;
 }
+
+static std::wstring _shader_include_resource_name(const char* p_path)
+{
+    std::string s = "SHADERS_";
+    for (const char* c = p_path; *c; ++c) {
+        unsigned char ch = (unsigned char)*c;
+        bool alnum = (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+        s += alnum ? (char)std::toupper(ch) : '_';
+    }
+    return std::wstring(s.begin(), s.end());
+}
+
+struct ShaderIncluder : shaderc::CompileOptions::IncluderInterface
+{
+    struct Result {
+        shaderc_include_result result{};
+        std::string name;
+        EmbeddedResource::Blob blob;
+    };
+
+    shaderc_include_result* GetInclude(const char* p_requested, shaderc_include_type, const char*, size_t) override {
+        Result* r = new Result();
+        r->name = p_requested;
+        r->blob = EmbeddedResource::load(_shader_include_resource_name(p_requested).c_str());
+        if (r->blob) {
+            r->result.source_name = r->name.c_str();
+            r->result.source_name_length = r->name.size();
+            r->result.content = (const char*)r->blob.data;
+            r->result.content_length = r->blob.size;
+        } else {
+            r->result.source_name = "";
+            r->result.source_name_length = 0;
+            r->result.content = "embedded shader include not found";
+            r->result.content_length = std::strlen(r->result.content);
+        }
+        r->result.user_data = r;
+        return &r->result;
+    }
+
+    void ReleaseInclude(shaderc_include_result* p_data) override {
+        delete static_cast<Result*>(p_data->user_data);
+    }
+};
 
 VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
 {
@@ -2305,8 +2362,17 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
     size_t code_size = p_ci.spirv_size;
 
     if (!code && p_ci.glsl) {
-        const size_t source_len = p_ci.glsl_size;
-        const uint64_t key = _shader_cache_key(p_ci, source_len);
+        shaderc::Compiler compiler;
+        shaderc::CompileOptions options;
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
+        options.SetIncluder(std::make_unique<ShaderIncluder>());
+
+        shaderc::PreprocessedSourceCompilationResult pre = compiler.PreprocessGlsl(p_ci.glsl, p_ci.glsl_size, _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
+        LUMEN_ERR_FAIL_COND_V_MSG(pre.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, pre.GetErrorMessage().c_str());
+        const std::string flat(pre.cbegin(), pre.cend());
+
+        const uint64_t key = _shader_cache_key(flat.data(), flat.size(), p_ci.stage);
 
         std::filesystem::path cache_file;
         if (!shader_cache_dir.empty()) {
@@ -2333,12 +2399,7 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
         }
 
         if (!loaded) {
-            shaderc::Compiler compiler;
-            shaderc::CompileOptions options;
-            options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-            options.SetOptimizationLevel(shaderc_optimization_level_performance);
-
-            shaderc::SpvCompilationResult res = compiler.CompileGlslToSpv(p_ci.glsl, source_len, _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
+            shaderc::SpvCompilationResult res = compiler.CompileGlslToSpv(flat.c_str(), flat.size(), _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
             LUMEN_ERR_FAIL_COND_V_MSG(res.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, res.GetErrorMessage().c_str());
 
             spirv_storage.assign(res.cbegin(), res.cend());
@@ -2526,21 +2587,6 @@ DeviceDriverVulkan::Pipeline DeviceDriverVulkan::graphics_pipeline_create(const 
 
 DeviceDriverVulkan::Pipeline DeviceDriverVulkan::compute_pipeline_create(const ComputePipelineCreateInfo& p_ci)
 {
-    // using enum Error;
-    
-    // LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");
-
-    // VkComputePipelineCreateInfo pipeline_ci{};
-    
-    // Pipeline pipeline;
-    // pipeline.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
-    // VkResult err = vkCreateComputePipelines(device, pipeline_cache, 1, &pipeline_ci, nullptr, &pipeline.pipeline);
-    // LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, {}, "Couldn't create Vulkan graphics pipeline.");
-
-    // set_object_name(VK_OBJECT_TYPE_PIPELINE, (uint64_t)pipeline.pipeline, p_ci.name);
-    // return pipeline;
-
-
     using enum Error;
 
     LUMEN_ERR_FAIL_COND_V_MSG(!p_ci.compute_shader, {}, "Compute pipeline needs a compute shader.");

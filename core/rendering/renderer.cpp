@@ -47,7 +47,7 @@ Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
     pending_width = width;
     pending_height = height;
     
-    err = persistent.initialize(r_dd);
+    err = frame.initialize(r_dd);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
@@ -58,7 +58,7 @@ void Renderer::shutdown()
     unload();
     
     graph.shutdown();
-    persistent.shutdown();
+    frame.shutdown();
 
     for (uint32_t i = 0; i < frame_count; i++) {
         dd->fence_free(in_flight_fences[i]);
@@ -134,84 +134,26 @@ Error Renderer::apply_pending_size()
     return set_size(pending_width, pending_height);
 }
 
-static glm::mat4 perspective_reverse_z(float fov_y, float aspect, float near_z, float far_z)
-{
-    const float f = 1.0f / std::tan(fov_y * 0.5f);
-    glm::mat4 m(0.0f);
-    m[0][0] = f / aspect;
-    m[1][1] = f;
-    // reverse-Z, [0,1] depth: near maps to 1, far to 0
-    m[2][2] = near_z / (far_z - near_z);
-    m[2][3] = -1.0f;
-    m[3][2] = (far_z * near_z) / (far_z - near_z);
-    return m;  // column-major glm
-}
-
-static void extract_frustum_planes(const glm::mat4& vp, glm::vec4 out[6])
-{
-    auto row = [&](int i) { return glm::vec4(vp[0][i], vp[1][i], vp[2][i], vp[3][i]); };
-    const glm::vec4 r0 = row(0), r1 = row(1), r2 = row(2), r3 = row(3);
-    out[0] = r3 + r0;  // left
-    out[1] = r3 - r0;  // right
-    out[2] = r3 + r1;  // bottom
-    out[3] = r3 - r1;  // top
-    out[4] = r3 + r2;  // near
-    out[5] = r3 - r2;  // far
-    for (int i = 0; i < 6; i++) out[i] /= glm::length(glm::vec3(out[i])); // normalize
-}
-
 void Renderer::_frame_prepare(const Scene&)
 {
-    static thread_local std::vector<MeshInstance> mesh_instances;
-    static thread_local std::vector<mat4> transforms;
-    mesh_instances.clear();
-    transforms.clear();
-
     for (uint32_t i = 0; i < (uint32_t)geometry.meshes.size(); i++) {
-        mesh_instances.push_back(MeshInstance{ i, (uint32_t)transforms.size(), 0, 0 });
-        transforms.push_back(mat4(1.0f));
+        for (int j=0; j<10000; j++) {
+            frame.instances_scratch.push_back(Instance{ i, (uint32_t)frame.transforms_scratch.size(), 0, 0 });
+            frame.transforms_scratch.push_back(Transform{ mat4(1.0f), mat4(1.0f) });
+        }
     }
 
-    persistent.instance_count = (uint32_t)std::min<size_t>(mesh_instances.size(), MAX_INSTANCES);
+    frame.instance_count = (uint32_t)frame.instances_scratch.size();
 
-    if (persistent.instance_count != 0) {
-        drivers::DeviceDriverVulkan::Buffer& ib = persistent.mesh_instance_buffers[current_frame];
-        dd->buffer_update(ib, mesh_instances.data(), (VkDeviceSize)persistent.instance_count * sizeof(MeshInstance));
-        dd->buffer_flush(ib, 0, (VkDeviceSize)persistent.instance_count * sizeof(MeshInstance));
+    if (frame.instance_count != 0) {
+        drivers::DeviceDriverVulkan::Buffer& ib = frame.instance_buffers[current_frame];
+        dd->buffer_update(ib, frame.instances_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Instance));
+        dd->buffer_flush(ib, 0, (VkDeviceSize)frame.instance_count * sizeof(Instance));
 
-        drivers::DeviceDriverVulkan::Buffer& tb = persistent.transform_buffers[current_frame];
-        dd->buffer_update(tb, transforms.data(), (VkDeviceSize)persistent.instance_count * sizeof(mat4));
-        dd->buffer_flush(tb, 0, (VkDeviceSize)persistent.instance_count * sizeof(mat4));
+        drivers::DeviceDriverVulkan::Buffer& tb = frame.transform_buffers[current_frame];
+        dd->buffer_update(tb, frame.transforms_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Transform));
+        dd->buffer_flush(tb, 0, (VkDeviceSize)frame.instance_count * sizeof(Transform));
     }
-
-
-    const float aspect = height ? (float)width / (float)height : 1.0f;
-    const float fov_y = radians(60.0f);
-    const float near_z = 0.1f, far_z = 1000.0f;   // reverse-Z: near=0.1 fine, far large
-
-    // temporary orbit camera (replaces the chrono hack in the geometry pass)
-    static const auto start = std::chrono::high_resolution_clock::now();
-    const float t = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
-    const float radius = 3.0f, angle = t * radians(45.0f);
-    const vec3 eye(radius * cos(angle), 1.0f, radius * sin(angle));
-
-    CameraUniform cam{};
-    cam.view = lookAt(eye, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-    cam.proj = perspective_reverse_z(fov_y, aspect, near_z, far_z);
-    cam.view_proj = cam.proj * cam.view;
-    cam.inv_view = inverse(cam.view);
-    cam.inv_proj = inverse(cam.proj);
-    cam.inv_view_proj = inverse(cam.view_proj);
-    cam.position = vec4(eye, 1.0f);
-    extract_frustum_planes(cam.view_proj, cam.frustum_planes);
-    cam.near_z = near_z;
-    cam.far_z = far_z;
-    cam.fov_y = fov_y;
-    cam.aspect = aspect;
-
-    drivers::DeviceDriverVulkan::Buffer& cb = persistent.camera_buffers[current_frame];
-    dd->buffer_update(cb, &cam, sizeof(cam));
-    dd->buffer_flush(cb, 0, sizeof(cam));
 }
 
 Error Renderer::begin_frame(const Scene& p_scene)
@@ -227,15 +169,16 @@ Error Renderer::begin_frame(const Scene& p_scene)
     err = dd->swapchain_acquire_next_image(image_available_semaphores[current_frame]);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
+    frame.update(p_scene, current_frame);
     _frame_prepare(p_scene);
 
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     
-    graph.import_buffer("Camera", &persistent.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Camera", &frame.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    graph.import_buffer("MeshInstances", &persistent.mesh_instance_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    graph.import_buffer("Transforms", &persistent.transform_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Instances", &frame.instance_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Transforms", &frame.transform_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
 
     return Ok;
 }
@@ -305,6 +248,17 @@ Error Renderer::end_frame()
     frame_number++;
 
     return Ok;
+}
+
+RenderContext Renderer::make_context()
+{
+    RenderContext ctx{};
+    ctx.dd = dd;
+    ctx.graph = &graph;
+    ctx.textures = &textures;
+    ctx.geometry = &geometry;
+    ctx.frame = &frame;
+    return ctx;
 }
 
 }

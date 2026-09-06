@@ -46,12 +46,8 @@ Error Application::initialize(const ApplicationCreateInfo& p_create_info)
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
     render_path = create_render_path();
-    render_path->ctx.dd = &dd;
+    render_path->ctx = renderer.make_context();
     render_path->ctx.imgui = &imgui;
-    render_path->ctx.graph = &renderer.graph;
-    render_path->ctx.textures = &renderer.textures;
-    render_path->ctx.geometry = &renderer.geometry;
-    render_path->ctx.persistent = &renderer.persistent;
     err = render_path->create_resources();
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
@@ -172,10 +168,8 @@ void Application::_apply_pending_render_path()
 
     render_path = pending_render_path;
     pending_render_path = nullptr;
-
-    render_path->ctx.dd = &dd;
+    render_path->ctx = renderer.make_context();
     render_path->ctx.imgui = &imgui;
-    render_path->ctx.graph = &renderer.graph;
     if (render_path->create_resources() != Ok)
         log_write("Application: render path create_resources failed.");
 }

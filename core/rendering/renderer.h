@@ -3,7 +3,8 @@
 #include <core/rendering/render_graph.h>
 #include <core/rendering/resources/texture_cache.h>
 #include <core/rendering/resources/geometry_pool.h>
-#include <core/rendering/resources/persistent_resources.h>
+#include <core/rendering/frame_data.h>
+#include <core/rendering/render_context.h>
 #include <core/base/error.h>
 
 namespace lumen {
@@ -18,7 +19,7 @@ struct Renderer
     
     TextureCache textures;
     GeometryPool geometry;
-    PersistentResources persistent;
+    FrameData frame;
 
     uint32_t width = 0;
     uint32_t height = 0;
@@ -51,6 +52,8 @@ struct Renderer
     void compile();
     Error record();
     Error end_frame();
+    
+    RenderContext make_context();
 };
 
 }

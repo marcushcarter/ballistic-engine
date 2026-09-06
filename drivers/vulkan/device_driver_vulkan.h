@@ -413,7 +413,7 @@ struct DeviceDriverVulkan
     std::string shader_cache_dir;
     
     shaderc_shader_kind _shaderc_kind(ShaderStage p_stage);
-    uint64_t _shader_cache_key(const ShaderCreateInfo& p_ci, size_t p_source_len);
+    uint64_t _shader_cache_key(const void* p_source, size_t p_len, ShaderStage p_stage);
 
     VkShaderModule shader_create(const ShaderCreateInfo& p_ci);
     void shader_free(VkShaderModule& r_shader);

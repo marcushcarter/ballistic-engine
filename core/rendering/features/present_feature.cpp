@@ -6,7 +6,7 @@ namespace lumen {
 
 Error PresentFeature::create_resources()
 {   
-    present_pass.name = "Gamma_Blit";
+    present_pass.name = "Blit";
     present_pass.category = "Present";
     present_pass.setup = [](RenderGraph::Builder& b) {
         b.color_attachment("Backbuffer", VK_ATTACHMENT_LOAD_OP_CLEAR, { { 0.1f, 0.1f, 0.1f, 1.0f } });
@@ -19,7 +19,7 @@ Error PresentFeature::create_resources()
         cl.dd->command_render_set_viewport(cl.cmd, {{{0,0},bb->extent}});
         cl.dd->command_render_set_scissor(cl.cmd, {{{0,0},bb->extent}});
         
-        cl.dd->command_bind_pipeline(cl.cmd, gamma_blit_pipeline);
+        cl.dd->command_bind_pipeline(cl.cmd, blit_pipeline);
         struct { uint32_t srcIndex, samplerIndex; } pc;
         pc.srcIndex = out_color->bindless_sampled;
         pc.samplerIndex = cl.dd->default_sampler.bindless_sampler;
@@ -34,18 +34,18 @@ Error PresentFeature::create_pipelines()
 {
     VkRenderPass rp = ctx->graph->acquire_render_pass(present_pass);
 
-    EmbeddedResource::Blob blit_vert_blob = EmbeddedResource::load(L"SHADERS_GAMMA_BLIT_VERT");
-    EmbeddedResource::Blob blit_frag_blob = EmbeddedResource::load(L"SHADERS_GAMMA_BLIT_FRAG");
-    VkShaderModule blit_vs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Vertex, .glsl = (const char*)blit_vert_blob.data, .glsl_size = blit_vert_blob.size, .name = "gamma_blit_vs" });
-    VkShaderModule blit_fs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Fragment, .glsl = (const char*)blit_frag_blob.data, .glsl_size = blit_frag_blob.size, .name = "gamma_blit_fs" });
+    EmbeddedResource::Blob blit_vert_blob = EmbeddedResource::load(L"SHADERS_BLIT_VERT");
+    EmbeddedResource::Blob blit_frag_blob = EmbeddedResource::load(L"SHADERS_BLIT_FRAG");
+    VkShaderModule blit_vs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Vertex, .glsl = (const char*)blit_vert_blob.data, .glsl_size = blit_vert_blob.size, .name = "present/blit.vert" });
+    VkShaderModule blit_fs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Fragment, .glsl = (const char*)blit_frag_blob.data, .glsl_size = blit_frag_blob.size, .name = "present/blit.frag" });
 
     drivers::DeviceDriverVulkan::GraphicsPipelineCreateInfo pipeline_ci{};
     pipeline_ci.vertex_shader = blit_vs;
     pipeline_ci.fragment_shader = blit_fs;
     pipeline_ci.render_pass = rp;
     pipeline_ci.cull_mode = VK_CULL_MODE_NONE;
-    pipeline_ci.name = "gamma_blit_pipeline";
-    gamma_blit_pipeline = ctx->dd->graphics_pipeline_create(pipeline_ci);
+    pipeline_ci.name = "blit_pipeline";
+    blit_pipeline = ctx->dd->graphics_pipeline_create(pipeline_ci);
 
     ctx->dd->shader_free(blit_vs);
     ctx->dd->shader_free(blit_fs);
@@ -55,7 +55,7 @@ Error PresentFeature::create_pipelines()
 
 void PresentFeature::destroy_resources()
 {
-    ctx->dd->pipeline_free(gamma_blit_pipeline);
+    ctx->dd->pipeline_free(blit_pipeline);
 }
 
 void PresentFeature::build(RenderGraph& g)

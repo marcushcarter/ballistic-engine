@@ -1,23 +1,29 @@
 #pragma once
 #include <drivers/vulkan/device_driver_vulkan.h>
-#include <core/rendering/resources/scene_gpu.h>
+#include <core/rendering/scene_gpu.h>
+#include <core/scene/scenes.h>
 #include <core/base/error.h>
 #include <vector>
 
 namespace lumen {
 
-struct PersistentResources
+struct FrameData
 {
     drivers::DeviceDriverVulkan* dd = nullptr;
     uint32_t frame_count = 0;
     
-    std::vector<drivers::DeviceDriverVulkan::Buffer> mesh_instance_buffers;
+    std::vector<Instance> instances_scratch;
+    std::vector<Transform> transforms_scratch;
+    uint32_t instance_count = 0;
+    
+    std::vector<drivers::DeviceDriverVulkan::Buffer> instance_buffers;
     std::vector<drivers::DeviceDriverVulkan::Buffer> transform_buffers;
     std::vector<drivers::DeviceDriverVulkan::Buffer> camera_buffers;
-    uint32_t instance_count = 0;
     
     Error initialize(drivers::DeviceDriverVulkan& r_dd);
     void shutdown();
+
+    void update(const Scene& p_scene, uint32_t p_frame_index);
 };
 
 }
