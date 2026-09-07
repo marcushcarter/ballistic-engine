@@ -247,7 +247,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.drawIndirectCount, Failed, "GPU lacks drawIndirectCount, required for GPU-driven indirect-count draws.");
-        LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.vulkanMemoryModel, Failed, "GPU lacks vulkanMemoryModel, required for single-pass Hi-Z.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.vulkanMemoryModel, Failed, "GPU lacks vulkanMemoryModel, required for single-pass Hi-Z.");
 
     void* create_info_next = nullptr;
 
@@ -871,17 +871,13 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const Image
     if (p_ci.usage & VK_IMAGE_USAGE_SAMPLED_BIT) image.bindless_sampled = bindless_heap_alloc_sampled(image.image_view);
 
     if (p_ci.usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-        if (image.mip_levels > 1) {
-            image.mip_views.resize(image.mip_levels);
-            image.mip_storage_slots.resize(image.mip_levels);
-            for (uint32_t m = 0; m < image.mip_levels; m++) {
-                image.mip_views[m] = _image_create_mip_view(image, m);
-                image.mip_storage_slots[m] = bindless_heap_alloc_storage(image.mip_views[m]);
-            }
-            image.bindless_storage = image.mip_storage_slots[0];
-        } else {
-            image.bindless_storage = bindless_heap_alloc_storage(image.image_view);
+        image.mip_views.resize(image.mip_levels);
+        image.mip_storage_slots.resize(image.mip_levels);
+        for (uint32_t mm = 0; mm < image.mip_levels; mm++) {
+            image.mip_views[mm] = _image_create_mip_view(image, mm);
+            image.mip_storage_slots[mm] = bindless_heap_alloc_storage(image.mip_views[mm]);
         }
+        image.bindless_storage = image.mip_storage_slots[0];   // base level is the "default" storage slot
     }
 
     return image;

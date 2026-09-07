@@ -12,6 +12,35 @@ namespace lumen {
 
 using namespace glm;
 
+void Renderer::_create_hiz(uint32_t p_width, uint32_t p_height)
+{
+    uint32_t hw = (p_width + 1) / 2;
+    uint32_t hh = (p_height + 1) / 2;
+    uint32_t mips = 1, m = std::max(hw, hh);
+    while (m > 1) { m >>= 1; mips++; }
+
+    drivers::DeviceDriverVulkan::ImageCreateInfo ci{};
+    ci.format = VK_FORMAT_R16_SFLOAT;
+    ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    ci.mip_levels = mips;
+    ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
+    ci.fixed_width = hw;
+    ci.fixed_height = hh;
+    ci.name = "hiz";
+    hiz = dd->image_create_dedicated(ci, { hw, hh });
+
+    VkClearColorValue far_clear{};
+    far_clear.float32[0] = 0.0f;
+    dd->image_clear(hiz, far_clear);
+}
+
+void Renderer::_destroy_hiz()
+{
+    if (hiz.image) dd->image_free(hiz);
+    hiz = {};
+}
+
 Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
 {
     using enum Error;
@@ -42,13 +71,13 @@ Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
     err = graph.initialize(r_dd, frame_count);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     graph.declare_image_format("Backbuffer", dd->swapchain.format);
+    
+    err = frame.initialize(r_dd);
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     set_size(1, 1);
     pending_width = width;
     pending_height = height;
-    
-    err = frame.initialize(r_dd);
-    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     return Ok;
 }
@@ -59,6 +88,8 @@ void Renderer::shutdown()
     
     graph.shutdown();
     frame.shutdown();
+    
+    _destroy_hiz();
 
     for (uint32_t i = 0; i < frame_count; i++) {
         dd->fence_free(in_flight_fences[i]);
@@ -118,6 +149,9 @@ Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
 
     Error err = graph.set_size(p_width, p_height);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
+
+    _destroy_hiz();
+    _create_hiz(p_width, p_height);
 
     return Ok;
 }
@@ -231,7 +265,9 @@ Error Renderer::begin_frame(const Scene& p_scene)
 
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    
+    graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+    // graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+
     graph.import_buffer("Camera", &frame.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Instances", &frame.instance_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);

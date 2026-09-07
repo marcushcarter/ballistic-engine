@@ -11,6 +11,7 @@ struct FrameData
 {
     drivers::DeviceDriverVulkan* dd = nullptr;
     uint32_t frame_count = 0;
+    uint32_t current_index = 0;
     
     std::vector<Instance> instances_scratch;
     std::vector<Transform> transforms_scratch;
