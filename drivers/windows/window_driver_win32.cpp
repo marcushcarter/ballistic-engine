@@ -100,7 +100,7 @@ void WindowDriverWin32::window_bind()
         window.has_ctrls = true;
     }
 
-    ShowWindow(window.hwnd, SW_SHOW);
+    // ShowWindow(window.hwnd, SW_SHOW);
 }
 
 void WindowDriverWin32::window_free()
@@ -109,6 +109,18 @@ void WindowDriverWin32::window_free()
         DestroyWindow(window.hwnd);
         window.hwnd = nullptr;
     }
+}
+
+void WindowDriverWin32::window_show()
+{
+    if (!window.hwnd) return;
+    ShowWindow(window.hwnd, SW_SHOW);
+}
+
+void WindowDriverWin32::window_hide()
+{
+    if (!window.hwnd) return;
+    ShowWindow(window.hwnd, SW_HIDE);
 }
 
 bool WindowDriverWin32::window_should_close()

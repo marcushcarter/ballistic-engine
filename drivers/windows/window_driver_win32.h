@@ -41,6 +41,9 @@ struct WindowDriverWin32
     void window_bind();
     void window_free();
 
+    void window_show();
+    void window_hide();
+
     bool window_should_close();
     void window_request_close();
 

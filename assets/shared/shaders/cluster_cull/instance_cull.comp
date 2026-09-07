@@ -21,12 +21,23 @@ layout(push_constant) uniform Push {
     uint instance_count;
 } pc;
 
+bool cull_frustum(vec3 center_ws, float radius_ws) {
+    return false;
+}
+
 void main() {
     uint id = gl_GlobalInvocationID.x;
     if (id >= pc.instance_count) return;
 
     Instance instance = pc.instances.data[id];
+    mat4 model = pc.transforms.data[instance.transform_id].curr_mtx;
     Mesh mesh = pc.geometry.meshes.data[instance.mesh_id];
+
+    vec3 center = (model * vec4(mesh.bounds_sphere.xyz, 1.0)).xyz;
+    float scale = max(length(model[0].xyz), max(length(model[1].xyz), length(model[2].xyz)));
+    float radius = mesh.bounds_sphere.w * scale;
+
+    if (cull_frustum(center, radius)) return;
     
     uint slot = atomicAdd(pc.visible_instances.count, 1u);
     pc.visible_instances.data[slot] = id;

@@ -233,6 +233,9 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     supported_1_2.pNext = &supported_1_1;
     vkGetPhysicalDeviceFeatures2(physical_device, &supported_features2);
 
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.storageBuffer16BitAccess, Failed, "GPU lacks storageBuffer16BitAccess, required for 16-bit vertex data.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.shaderDrawParameters, Failed, "GPU lacks shaderDrawParameters, required for gl_DrawID in indirect draws.");
+
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorIndexing, Failed, "GPU lacks descriptorIndexing, required for bindless rendering.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.runtimeDescriptorArray, Failed, "GPU lacks runtimeDescriptorArray, required for bindless rendering.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.descriptorBindingPartiallyBound, Failed, "GPU lacks descriptorBindingPartiallyBound.");
@@ -242,7 +245,6 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderSampledImageArrayNonUniformIndexing, Failed, "GPU lacks shaderSampledImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
-    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.storageBuffer16BitAccess, Failed, "GPU lacks storageBuffer16BitAccess, required for 16-bit vertex data.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
 
     void* create_info_next = nullptr;
@@ -271,6 +273,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
 
     VkPhysicalDeviceVulkan11Features features_1_1{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     features_1_1.storageBuffer16BitAccess = VK_TRUE;
+    features_1_1.shaderDrawParameters = VK_TRUE;
     features_1_1.pNext = create_info_next;
     create_info_next = &features_1_1;
 

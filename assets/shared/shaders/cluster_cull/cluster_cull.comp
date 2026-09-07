@@ -12,6 +12,7 @@ layout(local_size_x = 64) in;
 
 layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uint64_t data[]; };
 layout(buffer_reference, scalar) buffer VisibleClusterBuffer { uint count; uint data[]; };
+layout(buffer_reference, scalar) buffer ClusterRetestBuffer { uint count; uint data[]; };
 
 layout(push_constant) uniform Push {
     CameraBuffer camera;
@@ -20,7 +21,25 @@ layout(push_constant) uniform Push {
     TransformBuffer transforms;
     ClusterRefsBuffer cluster_refs;
     VisibleClusterBuffer visible_clusters;
+    ClusterRetestBuffer cluster_retest;
+    float px_per_unit;
 } pc;
+
+bool cull_frustum(vec3 center_ws, float radius_ws) {
+    return false;
+}
+
+bool cull_backface_cone(vec3 center_ws, vec3 cone_axis_ws, float cone_cutoff, vec3 cam_pos) {
+    return false;
+}
+
+bool lod_reject(Cluster cluster, vec3 center_ws, float dist, float px_per_unit) {
+    return false;
+}
+
+bool cull_occlusion(vec3 center_ws, float radius_ws) {
+    return false;
+}
 
 void main() {
     uint id = gl_GlobalInvocationID.x;
@@ -34,10 +53,24 @@ void main() {
     mat4 model = pc.transforms.data[instance.transform_id].curr_mtx;
     Cluster cluster = pc.geometry.clusters.clusters[cluster_id];
 
-    bool visible = true;
-    // cull
-    if (visible) {
-        uint slot = atomicAdd(pc.visible_clusters.count, 1u);
-        pc.visible_clusters.data[slot] = id;
+    vec3 center = (model * vec4(cluster.cull_sphere.xyz, 1.0)).xyz;
+    float scale = max(length(model[0].xyz), max(length(model[1].xyz), length(model[2].xyz)));
+    float radius = cluster.cull_sphere.w * scale;
+
+    if (cull_frustum(center, radius)) return;
+
+    vec3 cone_axis = normalize(mat3(model) * cluster.cull_cone.xyz);
+    if (cull_backface_cone(center, cone_axis, cluster.cull_cone.w, pc.camera.position.xyz)) return;
+
+    float dist = length(center - pc.camera.position.xyz);
+    if (lod_reject(cluster, center, dist, pc.px_per_unit)) return;
+
+    if (cull_occlusion(center, radius)) {
+        uint slot = atomicAdd(pc.cluster_retest.count, 1u);
+        pc.cluster_retest.data[slot] = id;
+        return;
     }
+
+    uint slot = atomicAdd(pc.visible_clusters.count, 1u);
+    pc.visible_clusters.data[slot] = id;
 }

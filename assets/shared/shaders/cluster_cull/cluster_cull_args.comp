@@ -8,11 +8,13 @@ layout(local_size_x = 1) in;
 layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; };
 layout(buffer_reference, scalar) writeonly buffer IndirectDispatch { uint x; uint y; uint z; };
 layout(buffer_reference, scalar) writeonly buffer VisibleClusterBuffer { uint count; };
+layout(buffer_reference, scalar) writeonly buffer ClusterRetestBuffer { uint count; };
 
 layout(push_constant) uniform Push {
     ClusterRefsBuffer cluster_refs;
     IndirectDispatch cull_args;
     VisibleClusterBuffer visible_clusters;
+    ClusterRetestBuffer cluster_retest;
 } pc;
 
 void main() {
@@ -21,4 +23,5 @@ void main() {
     pc.cull_args.z = 1u;
 
     pc.visible_clusters.count = 0u;
+    pc.cluster_retest.count = 0u;
 }

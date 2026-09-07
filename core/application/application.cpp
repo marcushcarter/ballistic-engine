@@ -53,6 +53,10 @@ Error Application::initialize(const ApplicationCreateInfo& p_create_info)
 
     tasks.start(std::max(1u, std::thread::hardware_concurrency() - 1u), 1);
     
+    err = on_init();
+    LUMEN_ERR_FAIL_COND_V(err != Ok, err);
+    
+    win32.window_show();
     return Ok;
 }
 
@@ -82,10 +86,6 @@ void Application::shutdown()
 int Application::run()
 {
     using enum Error;
-    Error err;
-
-    err = on_init();
-    LUMEN_ERR_FAIL_COND_V(err != Ok, static_cast<int>(err));
 
     auto lastTime = std::chrono::steady_clock::now();
 
