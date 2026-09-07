@@ -44,7 +44,7 @@ Error PresentFeature::create_pipelines()
     pipeline_ci.fragment_shader = blit_fs;
     pipeline_ci.render_pass = rp;
     pipeline_ci.cull_mode = VK_CULL_MODE_NONE;
-    pipeline_ci.name = "blit_pipeline";
+    pipeline_ci.name = "present/blit";
     blit_pipeline = ctx->dd->graphics_pipeline_create(pipeline_ci);
 
     ctx->dd->shader_free(blit_vs);

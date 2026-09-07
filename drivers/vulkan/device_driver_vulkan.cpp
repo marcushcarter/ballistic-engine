@@ -1256,6 +1256,16 @@ void DeviceDriverVulkan::command_copy_buffer(VkCommandBuffer p_cmd, const Buffer
     vkCmdCopyBuffer(p_cmd, p_src.buffer, p_dst.buffer, 1, &region);
 }
 
+void DeviceDriverVulkan::command_fill_buffer(VkCommandBuffer p_cmd, const Buffer& p_buffer, uint32_t p_value, VkDeviceSize p_offset, VkDeviceSize p_size)
+{
+    vkCmdFillBuffer(p_cmd, p_buffer.buffer, p_offset, p_size, p_value);
+}
+
+void DeviceDriverVulkan::command_update_buffer(VkCommandBuffer p_cmd, const Buffer& p_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset)
+{
+    vkCmdUpdateBuffer(p_cmd, p_buffer.buffer, p_offset, p_size, p_data);
+}
+
 Error DeviceDriverVulkan::buffer_upload_batch(const BufferUpload* p_uploads, uint32_t p_count)
 {
     using enum Error;

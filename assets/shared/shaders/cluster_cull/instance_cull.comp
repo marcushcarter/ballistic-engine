@@ -6,23 +6,11 @@
 
 #include "common/geometry.glsl"
 #include "common/camera.glsl"
+#include "common/instances.glsl"
 
 layout(local_size_x = 64) in;
 
-struct Instance {
-    uint mesh_id;
-    uint transform_id;
-    uint _pad0[2];
-};
-
-struct Transform {
-    mat4 prev_mtx;
-    mat4 curr_mtx;
-};
-
-layout(buffer_reference, scalar) readonly buffer InstanceBuffer { Instance data[]; };
-layout(buffer_reference, scalar) readonly buffer TransformBuffer { Transform data[]; };
-layout(buffer_reference, scalar) writeonly buffer VisibleInstanceBuffer { uint data[]; };
+layout(buffer_reference, scalar) buffer VisibleInstanceBuffer { uint count; uint data[]; };
 
 layout(push_constant) uniform Push {
     CameraBuffer camera;
@@ -40,6 +28,6 @@ void main() {
     Instance instance = pc.instances.data[id];
     Mesh mesh = pc.geometry.meshes.data[instance.mesh_id];
     
-    uint slot = atomicAdd(pc.visible_instances.data[0], 1u);
-    pc.visible_instances.data[slot + 1] = id;
+    uint slot = atomicAdd(pc.visible_instances.count, 1u);
+    pc.visible_instances.data[slot] = id;
 }

@@ -63,6 +63,7 @@ void FrameData::update(const Scene& p_scene, uint32_t p_frame_index)
 
     instances_scratch.clear();
     transforms_scratch.clear();
+    cluster_ref_capacity = 0;
 
     // Camera.
     {

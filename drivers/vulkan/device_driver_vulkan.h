@@ -198,6 +198,8 @@ struct DeviceDriverVulkan
     };
 
     void command_copy_buffer(VkCommandBuffer p_cmd, const Buffer& p_src, const Buffer& p_dst, VkDeviceSize p_size, VkDeviceSize p_src_offset = 0, VkDeviceSize p_dst_offset = 0);
+    void command_fill_buffer(VkCommandBuffer p_cmd, const Buffer& p_buffer, uint32_t p_value, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
+    void command_update_buffer(VkCommandBuffer p_cmd, const Buffer& p_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset = 0);
     Error buffer_upload_batch(const BufferUpload* p_uploads, uint32_t p_count);
 
     void command_copy_image_to_buffer(VkCommandBuffer p_cmd, const Image& p_image, const Buffer& p_buffer, VkExtent2D p_extent);

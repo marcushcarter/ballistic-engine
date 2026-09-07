@@ -224,19 +224,11 @@ struct RenderGraph
         //     graph->profiler.draw_end(cmd);
         // }
 
-        // void dispatch(std::string_view p_name, uint32_t p_x, uint32_t p_y, uint32_t p_z) {
-        //     graph->profiler.draw_begin(cmd, _name(p_name));
-        //     dd->command_compute_dispatch(cmd, p_x, p_y, p_z);
-        //     ++draw_count;
-        //     graph->profiler.draw_end(cmd);
-        // }
+        void dispatch(std::string_view p_name, uint32_t p_x, uint32_t p_y = 1, uint32_t p_z = 1);
+        void dispatch_indirect(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset = 0);
 
-        // void dispatch_indirect(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset) {
-        //     graph->profiler.draw_begin(cmd, _name(p_name));
-        //     dd->command_compute_dispatch_indirect(cmd, p_indirect, p_offset);
-        //     ++draw_count;
-        //     graph->profiler.draw_end(cmd);
-        // }
+        void fill_buffer(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_buffer, uint32_t p_value, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
+        void update_buffer(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset = 0);
     };
     
     /**************/

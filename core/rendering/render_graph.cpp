@@ -379,11 +379,42 @@ void RenderGraph::_buffer_release_transients()
 /**** COMMANDS ****/
 /******************/
 
-void RenderGraph::CommandList::draw(std::string_view p_name, uint32_t p_vertex_count, uint32_t p_instance_count, uint32_t p_base_vertex, uint32_t p_first_instance) {
+void RenderGraph::CommandList::draw(std::string_view p_name, uint32_t p_vertex_count, uint32_t p_instance_count, uint32_t p_base_vertex, uint32_t p_first_instance)
+{
     graph->profiler.draw_begin(cmd, p_name, "Draw", p_instance_count);
     dd->command_render_draw(cmd, p_vertex_count, p_instance_count, p_base_vertex, p_first_instance);
     ++draw_count;
     graph->profiler.draw_end(cmd);
+}
+
+void RenderGraph::CommandList::dispatch(std::string_view p_name, uint32_t p_x, uint32_t p_y, uint32_t p_z)
+{
+    graph->profiler.dispatch_begin(cmd, p_name, "Dispatch");
+    dd->command_compute_dispatch(cmd, p_x, p_y, p_z);
+    ++draw_count;
+    graph->profiler.dispatch_end(cmd);
+}
+
+void RenderGraph::CommandList::dispatch_indirect(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset)
+{
+    graph->profiler.dispatch_begin(cmd, p_name, "Indirect Dispatch");
+    dd->command_compute_dispatch_indirect(cmd, p_indirect, p_offset);
+    ++draw_count;
+    graph->profiler.dispatch_end(cmd);
+}
+
+void RenderGraph::CommandList::fill_buffer(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_buffer, uint32_t p_value, VkDeviceSize p_offset, VkDeviceSize p_size)
+{
+    graph->profiler.transfer_begin(cmd, p_name, "Fill");
+    dd->command_fill_buffer(cmd, p_buffer, p_value, p_offset, p_size);
+    graph->profiler.transfer_end(cmd);
+}
+
+void RenderGraph::CommandList::update_buffer(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_buffer, const void* p_data, VkDeviceSize p_size, VkDeviceSize p_offset)
+{
+    graph->profiler.transfer_begin(cmd, p_name, "Update");
+    dd->command_update_buffer(cmd, p_buffer, p_data, p_size, p_offset);
+    graph->profiler.transfer_end(cmd);
 }
 
 /**************/

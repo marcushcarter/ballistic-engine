@@ -140,6 +140,7 @@ void Renderer::_frame_prepare(const Scene&)
         for (int j=0; j<10000; j++) {
             frame.instances_scratch.push_back(Instance{ i, (uint32_t)frame.transforms_scratch.size(), 0, 0 });
             frame.transforms_scratch.push_back(Transform{ mat4(1.0f), mat4(1.0f) });
+            frame.cluster_ref_capacity += geometry.meshes[i].cluster_count;
         }
     }
 

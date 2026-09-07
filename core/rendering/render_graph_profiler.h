@@ -43,7 +43,7 @@ struct RenderGraphProfiler
     /**** RESULTS ****/
     /*****************/
 
-    enum class MarkKind : uint8_t { Pass = 0, Draw = 1, Barrier = 2 };
+    enum class MarkKind : uint8_t { Pass = 0, Draw = 1, Barrier = 2, Dispatch = 3, Transfer = 4 };
 
     struct Timing {
         uint64_t key = 0;
@@ -147,8 +147,16 @@ struct RenderGraphProfiler
     void pass_end(VkCommandBuffer p_cmd, uint32_t p_draw_count);
     void sync_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_category);
     void sync_end(VkCommandBuffer p_cmd);
+    
+    void _leaf_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type, MarkKind p_kind, uint32_t p_instances, bool p_query_stats);
+    void _leaf_end(VkCommandBuffer p_cmd);
     void draw_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type, uint32_t p_instances = 1);
     void draw_end(VkCommandBuffer p_cmd);
+    void dispatch_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type = "Dispatch");
+    void dispatch_end(VkCommandBuffer p_cmd);
+    void transfer_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type = "Transfer");
+    void transfer_end(VkCommandBuffer p_cmd);
+
 };
 
 }

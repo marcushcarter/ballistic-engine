@@ -342,7 +342,7 @@ void RenderGraphProfiler::sync_end(VkCommandBuffer p_cmd)
     s.open_barrier = INVALID;
 }
 
-void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type, uint32_t p_instances)
+void RenderGraphProfiler::_leaf_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type, MarkKind p_kind, uint32_t p_instances, bool p_query_stats)
 {
     if (!active) return;
     Slot& s = slots[slot];
@@ -354,7 +354,7 @@ void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_n
     const uint64_t name_id = p_name.empty() ? 0 : intern_named(p_name);
     if (name_id != 0) occurrence = s.name_occurrence[name_id]++;
     else occurrence = s.pass_ordinal;
-    
+
     const uint64_t type_id = p_name.empty() ? 0 : intern_named(p_type);
 
     Mark m;
@@ -366,7 +366,7 @@ void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_n
     m.parent = s.open_pass;
     m.draw_count = 1;
     m.instances = p_instances;
-    m.kind = MarkKind::Draw;
+    m.kind = p_kind;
 
     uint32_t ts;
     if (!_write_boundary(p_cmd, ts)) {
@@ -375,7 +375,7 @@ void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_n
     }
     m.begin_query = ts;
 
-    if (stats_active && s.stat_count < s.stat_reset) {
+    if (p_query_stats && stats_active && s.stat_count < s.stat_reset) {
         m.stat_query = s.stat_count++;
         m.occl_query = s.occl_count++;
         dd->command_begin_query(p_cmd, s.stat_pool, m.stat_query, 0);
@@ -386,12 +386,12 @@ void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_n
     s.marks.push_back(m);
 }
 
-void RenderGraphProfiler::draw_end(VkCommandBuffer p_cmd)
+void RenderGraphProfiler::_leaf_end(VkCommandBuffer p_cmd)
 {
     if (!active || slots[slot].open_draw == INVALID) return;
     Slot& s = slots[slot];
     Mark& m = s.marks[s.open_draw];
-    
+
     if (stats_active && m.stat_query != INVALID) {
         dd->command_end_query(p_cmd, s.occl_pool, m.occl_query);
         dd->command_end_query(p_cmd, s.stat_pool, m.stat_query);
@@ -403,6 +403,36 @@ void RenderGraphProfiler::draw_end(VkCommandBuffer p_cmd)
         s.last_boundary = ts;
     }
     s.open_draw = INVALID;
+}
+
+void RenderGraphProfiler::draw_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type, uint32_t p_instances)
+{
+    _leaf_begin(p_cmd, p_name, p_type, MarkKind::Draw, p_instances, true);
+}
+
+void RenderGraphProfiler::draw_end(VkCommandBuffer p_cmd)
+{
+    _leaf_end(p_cmd);
+}
+
+void RenderGraphProfiler::dispatch_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type)
+{
+    _leaf_begin(p_cmd, p_name, p_type, MarkKind::Dispatch, 0, false);
+}
+
+void RenderGraphProfiler::dispatch_end(VkCommandBuffer p_cmd)
+{
+    _leaf_end(p_cmd);
+}
+
+void RenderGraphProfiler::transfer_begin(VkCommandBuffer p_cmd, std::string_view p_name, std::string_view p_type)
+{
+    _leaf_begin(p_cmd, p_name, p_type, MarkKind::Transfer, 0, false);
+}
+
+void RenderGraphProfiler::transfer_end(VkCommandBuffer p_cmd)
+{
+    _leaf_end(p_cmd);
 }
 
 }

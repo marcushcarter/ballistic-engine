@@ -318,10 +318,10 @@ void ProfilerTimeline::draw(EditorContext& ctx)
             }
         }
 
-        // Draw calls.
+        // Draw calls + compute dispatches.
         for (size_t i = 0; i < n; ++i) {
             const RenderGraphProfiler::Timing& t = src[i];
-            if (t.kind != RenderGraphProfiler::MarkKind::Draw) continue;
+            if (t.kind != RenderGraphProfiler::MarkKind::Draw && t.kind != RenderGraphProfiler::MarkKind::Dispatch && t.kind != RenderGraphProfiler::MarkKind::Transfer) continue;
 
             const uint32_t p = t.parent;
             if (p == RenderGraphProfiler::INVALID) continue;
@@ -353,10 +353,15 @@ void ProfilerTimeline::draw(EditorContext& ctx)
             if (bar_hovered) {
                 ImGui::BeginTooltip();
 
-                if (named) imgui_title("%s · %s", t.name, t.type);
-                else imgui_title("Draw %u", t.ordinal);
+                const bool is_graphics = t.kind == RenderGraphProfiler::MarkKind::Draw;
+                if (named) {
+                    imgui_title("%s · %s", t.name, t.type);
+                } else {
+                    const char* k = t.kind == RenderGraphProfiler::MarkKind::Dispatch ? "Dispatch" : t.kind == RenderGraphProfiler::MarkKind::Transfer ? "Transfer" : "Draw";
+                    imgui_title("%s %u", k, t.ordinal);
+                }
                 imgui_property_row("Time", "%.0f µs", t.gpu_ms*1000.0);
-                imgui_property_row("Pixel Count", "%llu", (unsigned long long)t.samples);
+                if (is_graphics) imgui_property_row("Pixel Count", "%llu", (unsigned long long)t.samples);
                 imgui_spacing();
                 
                 imgui_title("Owner Object");
@@ -366,13 +371,15 @@ void ProfilerTimeline::draw(EditorContext& ctx)
                 imgui_property_row("Location", "%s", "n/a");
                 imgui_property_row("Type", "%s", t.type);
                 imgui_spacing();
-                
-                imgui_title("Primitives");
-                imgui_property_row("Triangles", "%llu", (unsigned long long)t.primitives);
-                imgui_property_row("Vertices", "%llu", (unsigned long long)t.vertices);
-                imgui_property_row("Instances", "%u", t.instances);
-                imgui_property_row("Total Triangles", "%llu", (unsigned long long)src[p].primitives);
 
+                if (is_graphics) {
+                    imgui_title("Primitives");
+                    imgui_property_row("Triangles", "%llu", (unsigned long long)t.primitives);
+                    imgui_property_row("Vertices", "%llu", (unsigned long long)t.vertices);
+                    imgui_property_row("Instances", "%u", t.instances);
+                    imgui_property_row("Total Triangles", "%llu", (unsigned long long)src[p].primitives);
+                }
+                
                 ImGui::EndTooltip();
             }
         }

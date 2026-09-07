@@ -15,6 +15,7 @@ struct FrameData
     std::vector<Instance> instances_scratch;
     std::vector<Transform> transforms_scratch;
     uint32_t instance_count = 0;
+    uint32_t cluster_ref_capacity = 0;
     
     std::vector<drivers::DeviceDriverVulkan::Buffer> instance_buffers;
     std::vector<drivers::DeviceDriverVulkan::Buffer> transform_buffers;
