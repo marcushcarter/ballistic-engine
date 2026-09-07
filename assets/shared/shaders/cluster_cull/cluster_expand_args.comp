@@ -4,14 +4,14 @@
 
 layout(local_size_x = 1) in;
 
-layout(buffer_reference, scalar) readonly buffer VisibleInstanceBuffer { uint count; uint data[]; };
+layout(buffer_reference, scalar) readonly buffer VisibleInstanceBuffer { uint count; };
 layout(buffer_reference, scalar) writeonly buffer IndirectDispatch { uint x; uint y; uint z; };
+layout(buffer_reference, scalar) writeonly buffer ClusterRefsBuffer { uint count; };
 
 layout(push_constant) uniform Push {
-    InstanceBuffer instances;
     VisibleInstanceBuffer visible_instances;
     IndirectDispatch expand_args;
-    IndirectDispatch cull_args;
+    ClusterRefsBuffer cluster_refs;
 } pc;
 
 void main() {
@@ -19,7 +19,5 @@ void main() {
     pc.expand_args.y = 1u;
     pc.expand_args.z = 1u;
 
-    pc.cull_args.x = 0u;
-    pc.cull_args.y = 1u;
-    pc.cull_args.z = 1u;
+    pc.cluster_refs.count = 0u;
 }

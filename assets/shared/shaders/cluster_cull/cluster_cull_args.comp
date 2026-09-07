@@ -1,0 +1,24 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 1) in;
+
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; };
+layout(buffer_reference, scalar) writeonly buffer IndirectDispatch { uint x; uint y; uint z; };
+layout(buffer_reference, scalar) writeonly buffer VisibleClusterBuffer { uint count; };
+
+layout(push_constant) uniform Push {
+    ClusterRefsBuffer cluster_refs;
+    IndirectDispatch cull_args;
+    VisibleClusterBuffer visible_clusters;
+} pc;
+
+void main() {
+    pc.cull_args.x = (pc.cluster_refs.count + 63u) / 64u;
+    pc.cull_args.y = 1u;
+    pc.cull_args.z = 1u;
+
+    pc.visible_clusters.count = 0u;
+}

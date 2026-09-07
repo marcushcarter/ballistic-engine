@@ -1,0 +1,43 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+
+#include "common/geometry.glsl"
+#include "common/camera.glsl"
+#include "common/instances.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uint64_t data[]; };
+layout(buffer_reference, scalar) buffer VisibleClusterBuffer { uint count; uint data[]; };
+
+layout(push_constant) uniform Push {
+    CameraBuffer camera;
+    GeometryBuffer geometry;
+    InstanceBuffer instances;
+    TransformBuffer transforms;
+    ClusterRefsBuffer cluster_refs;
+    VisibleClusterBuffer visible_clusters;
+} pc;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= pc.cluster_refs.count) return;
+
+    uint64_t ref = pc.cluster_refs.data[id];
+    uint instance_id = uint(ref >> 32);
+    uint cluster_id = uint(ref & 0xffffffffUL);
+
+    Instance instance = pc.instances.data[instance_id];
+    mat4 model = pc.transforms.data[instance.transform_id].curr_mtx;
+    Cluster cluster = pc.geometry.clusters.clusters[cluster_id];
+
+    bool visible = true;
+    // cull
+    if (visible) {
+        uint slot = atomicAdd(pc.visible_clusters.count, 1u);
+        pc.visible_clusters.data[slot] = id;
+    }
+}
