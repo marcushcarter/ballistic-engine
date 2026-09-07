@@ -1,7 +1,6 @@
 #version 460
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common/geometry.glsl"
 #include "common/instances.glsl"
@@ -9,7 +8,7 @@
 layout(local_size_x = 64) in;
 
 layout(buffer_reference, scalar) readonly buffer VisibleInstanceBuffer { uint count; uint data[]; };
-layout(buffer_reference, scalar) buffer ClusterRefsBuffer { uint count; uint _pad; uint64_t data[]; };
+layout(buffer_reference, scalar) buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
 
 layout(push_constant) uniform Push {
     GeometryBuffer geometry;
@@ -27,7 +26,7 @@ void main() {
     Mesh mesh = pc.geometry.meshes.data[instance.mesh_id];
 
     for (uint i = 0; i < mesh.cluster_count; i++) {
-        uint slot = atomicAdd(pc.cull_args.x, 1u);
-        pc.cluster_refs.data[slot] = (uint64_t(instance_id) << 32) | uint64_t(mesh.cluster_base + i);
+        uint slot = atomicAdd(pc.cluster_refs.count, 1u);
+        pc.cluster_refs.data[slot] = uvec2(instance_id, mesh.cluster_base + i);
     }
 }

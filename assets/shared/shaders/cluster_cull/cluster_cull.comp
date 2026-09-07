@@ -10,7 +10,7 @@
 
 layout(local_size_x = 64) in;
 
-layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uint64_t data[]; };
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
 layout(buffer_reference, scalar) buffer VisibleClusterBuffer { uint count; uint data[]; };
 layout(buffer_reference, scalar) buffer ClusterRetestBuffer { uint count; uint data[]; };
 
@@ -45,13 +45,13 @@ void main() {
     uint id = gl_GlobalInvocationID.x;
     if (id >= pc.cluster_refs.count) return;
 
-    uint64_t ref = pc.cluster_refs.data[id];
-    uint instance_id = uint(ref >> 32);
-    uint cluster_id = uint(ref & 0xffffffffUL);
+    uvec2 ref = pc.cluster_refs.data[id];
+    uint instance_id = ref.x;
+    uint cluster_id = ref.y;
 
     Instance instance = pc.instances.data[instance_id];
     mat4 model = pc.transforms.data[instance.transform_id].curr_mtx;
-    Cluster cluster = pc.geometry.clusters.clusters[cluster_id];
+    Cluster cluster = pc.geometry.clusters.data[cluster_id];
 
     vec3 center = (model * vec4(cluster.cull_sphere.xyz, 1.0)).xyz;
     float scale = max(length(model[0].xyz), max(length(model[1].xyz), length(model[2].xyz)));

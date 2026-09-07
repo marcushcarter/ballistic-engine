@@ -9,6 +9,8 @@
 
 #include <string>
 
+namespace shaderc { class Compiler; }
+
 namespace lumen::drivers {
 
 struct DeviceDriverVulkan
@@ -188,6 +190,8 @@ struct DeviceDriverVulkan
     Error buffer_flush(Buffer& r_buffer, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
     Error buffer_invalidate(Buffer& r_buffer, VkDeviceSize p_offset = 0, VkDeviceSize p_size = VK_WHOLE_SIZE);
     
+    void command_bind_index_buffer(VkCommandBuffer p_cmd, VkBuffer p_buffer, VkDeviceSize p_offset, VkIndexType p_index_type);
+
     // ----- STAGED UPLOAD -----
 
     struct BufferUpload {
@@ -387,20 +391,20 @@ struct DeviceDriverVulkan
 	/******************/
 	/**** PIPELINE ****/
 	/******************/
-
+    
     // ----- CACHE -----
-
+    
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
     std::string pipeline_cache_file;
-
+    
     bool _pipeline_cache_header_valid(const std::vector<uint8_t>& p_data) const;
     void _save_pipeline_cache();
-
+    
     Error pipeline_cache_create();
     void pipeline_cache_free();
     
     // ----- SHADER -----
-
+    
     enum class ShaderStage : uint8_t { Vertex, Fragment, Compute };
     
     struct ShaderCreateInfo {
@@ -413,6 +417,7 @@ struct DeviceDriverVulkan
     };
     
     std::string shader_cache_dir;
+    std::unique_ptr<shaderc::Compiler> shader_compiler;
     
     shaderc_shader_kind _shaderc_kind(ShaderStage p_stage);
     uint64_t _shader_cache_key(const void* p_source, size_t p_len, ShaderStage p_stage);

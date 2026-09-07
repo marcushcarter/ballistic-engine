@@ -66,6 +66,7 @@ struct GeometryPool
     uint32_t cluster_head = 0;
     uint32_t skin_head = 0;
     uint32_t bvhn_head = 0;
+    bool allocated = false;
 
     std::vector<LMesh> meshes;
     std::vector<Guid> mesh_guids;

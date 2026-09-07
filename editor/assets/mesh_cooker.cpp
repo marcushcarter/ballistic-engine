@@ -51,10 +51,33 @@ Error MeshCooker::_cook(const Job& p_job)
     } else {
 
     }
+    const vec3 pos[3] = {
+        vec3( 0.0f,  0.5f, 0.0f),
+        vec3(-0.5f, -0.5f, 0.0f),
+        vec3( 0.5f, -0.5f, 0.0f),
+    };
 
-    src.vertices.push_back(Vertex{vec3(0.0f, 0.5f, 0.0f)});
-    src.vertices.push_back(Vertex{vec3(-0.5f, -0.5f, 0.0f)});
-    src.vertices.push_back(Vertex{vec3(0.5f, -0.5f, 0.0f)});
+    vec3 pmin = pos[0], pmax = pos[0];
+    for (const vec3& p : pos) { pmin = glm::min(pmin, p); pmax = glm::max(pmax, p); }
+    const vec3 extent = pmax - pmin;
+    const vec3 inv_extent = vec3(extent.x > 0.0f ? 1.0f / extent.x : 0.0f, extent.y > 0.0f ? 1.0f / extent.y : 0.0f, extent.z > 0.0f ? 1.0f / extent.z : 0.0f);
+
+    auto quantize_pos = [&](const vec3& p) -> u16vec3 {
+        vec3 n = clamp((p - pmin) * inv_extent, 0.0f, 1.0f);
+        return u16vec3((uint16_t)glm::round(n.x * 65535.0f), (uint16_t)glm::round(n.y * 65535.0f), (uint16_t)glm::round(n.z * 65535.0f));
+    };
+
+    for (const vec3& p : pos) {
+        Vertex v{};
+        v.position = quantize_pos(p);
+        v.normal = i16vec2(0);
+        v.uv = u16vec2(0);
+        src.vertices.push_back(v);
+    }
+    src.pos_min = pmin;
+    src.pos_extent = extent;
+    src.bounds_sphere = vec4((pmin + pmax) * 0.5f, length(extent) * 0.5f);
+
     src.indices = { 0, 1, 2 };
     src.tri_slots = { 0 };
     src.slot_table = { 0, 0, 0 };

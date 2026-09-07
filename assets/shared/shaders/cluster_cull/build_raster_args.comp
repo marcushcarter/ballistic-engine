@@ -3,7 +3,6 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 #include "common/geometry.glsl"
 
@@ -18,7 +17,7 @@ struct DrawIndexedIndirectCommand {
 };
 
 layout(buffer_reference, scalar) readonly buffer VisibleClusterBuffer { uint count; uint data[]; };
-layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uint64_t data[]; };
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
 layout(buffer_reference, scalar) writeonly buffer DrawCmdBuffer { DrawIndexedIndirectCommand cmds[]; };
 
 layout(push_constant) uniform Push {
@@ -33,10 +32,10 @@ void main() {
     if (id >= pc.visible_clusters.count) return;
 
     uint ref_idx = pc.visible_clusters.data[id];
-    uint64_t ref = pc.cluster_refs.data[ref_idx];
-    uint cluster_id = uint(ref & 0xffffffffUL);
+    uvec2 ref = pc.cluster_refs.data[ref_idx];
+    uint cluster_id = ref.y;
 
-    Cluster cluster = pc.geometry.clusters.clusters[cluster_id];
+    Cluster cluster = pc.geometry.clusters.data[cluster_id];
 
     DrawIndexedIndirectCommand cmd;
     cmd.index_count = cluster.index_count;

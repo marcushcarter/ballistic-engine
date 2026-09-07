@@ -203,12 +203,7 @@ struct RenderGraph
         //     graph->profiler.draw_end(cmd);
         // }
 
-        // void draw_indexed_indirect_count(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, const drivers::DeviceDriverVulkan::Buffer& p_count, uint64_t p_count_offset, uint32_t p_max_draws, uint32_t p_stride) {
-        //     graph->profiler.draw_begin(cmd, _name(p_name));
-        //     dd->command_render_draw_indexed_indirect_count(cmd, p_indirect, p_offset, p_count, p_count_offset, p_max_draws, p_stride);
-        //     ++draw_count;
-        //     graph->profiler.draw_end(cmd);
-        // }
+        void draw_indexed_indirect_count(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, const drivers::DeviceDriverVulkan::Buffer& p_count, uint64_t p_count_offset, uint32_t p_max_draws, uint32_t p_stride);
 
         // void draw_indirect(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, uint32_t p_draw_count, uint32_t p_stride) {
         //     graph->profiler.draw_begin(cmd, _name(p_name));
@@ -223,6 +218,8 @@ struct RenderGraph
         //     ++draw_count;
         //     graph->profiler.draw_end(cmd);
         // }
+
+        void draw_indirect_count(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, const drivers::DeviceDriverVulkan::Buffer& p_count, uint64_t p_count_offset, uint32_t p_max_draws, uint32_t p_stride);
 
         void dispatch(std::string_view p_name, uint32_t p_x, uint32_t p_y = 1, uint32_t p_z = 1);
         void dispatch_indirect(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset = 0);

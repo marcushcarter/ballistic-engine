@@ -387,6 +387,22 @@ void RenderGraph::CommandList::draw(std::string_view p_name, uint32_t p_vertex_c
     graph->profiler.draw_end(cmd);
 }
 
+void RenderGraph::CommandList::draw_indexed_indirect_count(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, const drivers::DeviceDriverVulkan::Buffer& p_count, uint64_t p_count_offset, uint32_t p_max_draws, uint32_t p_stride)
+{
+    graph->profiler.draw_begin(cmd, p_name, "Draw Indexed Indirect Count", p_max_draws);
+    dd->command_render_draw_indexed_indirect_count(cmd, p_indirect, p_offset, p_count, p_count_offset, p_max_draws, p_stride);
+    ++draw_count;
+    graph->profiler.draw_end(cmd);
+}
+
+void RenderGraph::CommandList::draw_indirect_count(std::string_view p_name, const drivers::DeviceDriverVulkan::Buffer& p_indirect, uint64_t p_offset, const drivers::DeviceDriverVulkan::Buffer& p_count, uint64_t p_count_offset, uint32_t p_max_draws, uint32_t p_stride)
+{
+    graph->profiler.draw_begin(cmd, p_name, "Draw Indirect Count", p_max_draws);
+    dd->command_render_draw_indirect_count(cmd, p_indirect, p_offset, p_count, p_count_offset, p_max_draws, p_stride);
+    ++draw_count;
+    graph->profiler.draw_end(cmd);
+}
+
 void RenderGraph::CommandList::dispatch(std::string_view p_name, uint32_t p_x, uint32_t p_y, uint32_t p_z)
 {
     graph->profiler.dispatch_begin(cmd, p_name, "Dispatch");

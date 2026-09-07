@@ -246,6 +246,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.shaderStorageImageArrayNonUniformIndexing, Failed, "GPU lacks shaderStorageImageArrayNonUniformIndexing.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
+    LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.drawIndirectCount, Failed, "GPU lacks drawIndirectCount, required for GPU-driven indirect-count draws.");
 
     void* create_info_next = nullptr;
 
@@ -268,6 +269,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     features_1_2.separateDepthStencilLayouts = VK_TRUE;
     features_1_2.scalarBlockLayout = VK_TRUE;
     features_1_2.storageBuffer8BitAccess = VK_TRUE;
+    features_1_2.drawIndirectCount = VK_TRUE;
     features_1_2.pNext = create_info_next;
     create_info_next = &features_1_2;
 
@@ -457,6 +459,7 @@ Error DeviceDriverVulkan::initialize(ContextDriverVulkan& r_cd, uint32_t p_devic
 	frame_count = p_frame_count;
 
     shader_cache_dir = Paths::shader_cache().string();
+    shader_compiler = std::make_unique<shaderc::Compiler>();
     
     Error err = _initialize_device_extensions();
 	LUMEN_ERR_FAIL_COND_V(err != Ok, err);
@@ -509,6 +512,7 @@ void DeviceDriverVulkan::shutdown()
     bindless_heap_free();
     swapchain_free();
     pipeline_cache_free();
+    shader_compiler.reset();
     allocator_free();
 
     if (device) {
@@ -1248,6 +1252,11 @@ Error DeviceDriverVulkan::buffer_invalidate(Buffer& r_buffer, VkDeviceSize p_off
     VkResult err = vmaInvalidateAllocation(allocator, r_buffer.allocation, p_offset, p_size);
     LUMEN_ERR_FAIL_COND_V_MSG(err != VK_SUCCESS, Failed, "Couldn't invalidate buffer allocation.");
     return Ok;
+}
+
+void DeviceDriverVulkan::command_bind_index_buffer(VkCommandBuffer p_cmd, VkBuffer p_buffer, VkDeviceSize p_offset, VkIndexType p_index_type)
+{
+    vkCmdBindIndexBuffer(p_cmd, p_buffer, p_offset, p_index_type);
 }
 
 void DeviceDriverVulkan::command_copy_buffer(VkCommandBuffer p_cmd, const Buffer& p_src, const Buffer& p_dst, VkDeviceSize p_size, VkDeviceSize p_src_offset, VkDeviceSize p_dst_offset)
@@ -2319,7 +2328,7 @@ uint64_t DeviceDriverVulkan::_shader_cache_key(const void* p_source, size_t p_le
     mix_u32(static_cast<uint32_t>(p_stage));
     mix_u32(CACHE_FORMAT);
     mix_u32(static_cast<uint32_t>(shaderc_env_version_vulkan_1_3));
-    mix_u32(static_cast<uint32_t>(shaderc_optimization_level_performance));
+    mix_u32(static_cast<uint32_t>(shaderc_optimization_level_zero));
     return h;
 }
 
@@ -2375,13 +2384,12 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
     size_t code_size = p_ci.spirv_size;
 
     if (!code && p_ci.glsl) {
-        shaderc::Compiler compiler;
         shaderc::CompileOptions options;
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-        options.SetOptimizationLevel(shaderc_optimization_level_performance);
+        options.SetOptimizationLevel(shaderc_optimization_level_zero);
         options.SetIncluder(std::make_unique<ShaderIncluder>());
 
-        shaderc::PreprocessedSourceCompilationResult pre = compiler.PreprocessGlsl(p_ci.glsl, p_ci.glsl_size, _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
+        shaderc::PreprocessedSourceCompilationResult pre = shader_compiler->PreprocessGlsl(p_ci.glsl, p_ci.glsl_size, _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
         LUMEN_ERR_FAIL_COND_V_MSG(pre.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, pre.GetErrorMessage().c_str());
         const std::string flat(pre.cbegin(), pre.cend());
 
@@ -2412,7 +2420,7 @@ VkShaderModule DeviceDriverVulkan::shader_create(const ShaderCreateInfo& p_ci)
         }
 
         if (!loaded) {
-            shaderc::SpvCompilationResult res = compiler.CompileGlslToSpv(flat.c_str(), flat.size(), _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
+            shaderc::SpvCompilationResult res = shader_compiler->CompileGlslToSpv(flat.c_str(), flat.size(), _shaderc_kind(p_ci.stage), p_ci.name ? p_ci.name : "embedded_shader", options);
             LUMEN_ERR_FAIL_COND_V_MSG(res.GetCompilationStatus() != shaderc_compilation_status_success, VK_NULL_HANDLE, res.GetErrorMessage().c_str());
 
             spirv_storage.assign(res.cbegin(), res.cend());

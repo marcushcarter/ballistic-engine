@@ -1,7 +1,6 @@
 #include <core/rendering/resources/geometry_pool.h>
 #include <core/assets/asset_common.h>
 #include <core/assets/lmesh.h>
-// #include <vulkan/vk_enum_string_helper.h>
 #include <fstream>
 
 namespace lumen {
@@ -19,7 +18,7 @@ Error GeometryPool::allocate()
 
     const VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     vertex_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_VERTS * sizeof(Vertex), .usage = usage, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_vertices" });
-    index_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_INDICES * sizeof(uint32_t), .usage = usage, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_indices" });
+    index_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_INDICES * sizeof(uint32_t), .usage = usage | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_indices" });
     tri_slot_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_INDICES/3 * sizeof(uint32_t), .usage = usage, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_tri_slots" });
     slot_table_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_SLOT_TABLE * sizeof(uint32_t), .usage = usage, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_slot_table" });
     cluster_buffer = dd->buffer_create({ .size = (VkDeviceSize)MAX_CLUSTERS * sizeof(Cluster), .usage = usage, .device_local = true, .pool = dd->buffer_geometry_pool, .name = "geo_clusters" });
@@ -38,6 +37,7 @@ Error GeometryPool::allocate()
     a.bvh_nodes = bvh_nodes_buffer.device_address;
     a.meshes = mesh_buffer.device_address;
     dd->buffer_update(address_buffer, &a, sizeof(a));
+    allocated = true;
 
     return Ok;
 }
@@ -53,6 +53,7 @@ void GeometryPool::free()
     dd->buffer_free(mesh_buffer);
     dd->buffer_free(bvh_nodes_buffer);
     dd->buffer_free(address_buffer);
+    allocated = false;
     clear();
 }
 
@@ -133,6 +134,9 @@ uint32_t GeometryPool::load(Guid p_guid, const std::filesystem::path& p_path)
     Cluster* clus = reinterpret_cast<Cluster*>(p_clus);
     for (uint32_t i = 0; i < ph.cluster_count; i++) clus[i].index_base += index_head;
 
+    uint32_t* idx = reinterpret_cast<uint32_t*>(p_idx);
+    for (uint32_t i = 0; i < ph.index_count; i++) idx[i] += vertex_head;
+    
     BVHNode* bvhn = reinterpret_cast<BVHNode*>(p_bvhn);
     for (uint32_t i = 0; i < ph.bvh_node_count; i++) {
         if (bvhn[i].left & BVH_LEAF_BIT) {

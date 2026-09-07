@@ -134,10 +134,36 @@ Error Renderer::apply_pending_size()
     return set_size(pending_width, pending_height);
 }
 
+static glm::mat4 perspective_reverse_z(float fov_y, float aspect, float near_z, float far_z)
+{
+    const float f = 1.0f / std::tan(fov_y * 0.5f);
+    glm::mat4 m(0.0f);
+    m[0][0] = f / aspect;
+    m[1][1] = f;
+    // reverse-Z, [0,1] depth: near maps to 1, far to 0
+    m[2][2] = near_z / (far_z - near_z);
+    m[2][3] = -1.0f;
+    m[3][2] = (far_z * near_z) / (far_z - near_z);
+    return m;  // column-major glm
+}
+
+static void extract_frustum_planes(const glm::mat4& vp, glm::vec4 out[6])
+{
+    auto row = [&](int i) { return glm::vec4(vp[0][i], vp[1][i], vp[2][i], vp[3][i]); };
+    const glm::vec4 r0 = row(0), r1 = row(1), r2 = row(2), r3 = row(3);
+    out[0] = r3 + r0;  // left
+    out[1] = r3 - r0;  // right
+    out[2] = r3 + r1;  // bottom
+    out[3] = r3 - r1;  // top
+    out[4] = r3 + r2;  // near
+    out[5] = r3 - r2;  // far
+    for (int i = 0; i < 6; i++) out[i] /= glm::length(glm::vec3(out[i])); // normalize
+}
+
 void Renderer::_frame_prepare(const Scene&)
 {
     for (uint32_t i = 0; i < (uint32_t)geometry.meshes.size(); i++) {
-        for (int j=0; j<10000; j++) {
+        for (int j=0; j<10; j++) {
             frame.instances_scratch.push_back(Instance{ i, (uint32_t)frame.transforms_scratch.size(), 0, 0 });
             frame.transforms_scratch.push_back(Transform{ mat4(1.0f), mat4(1.0f) });
             frame.cluster_ref_capacity += geometry.meshes[i].cluster_count;
@@ -154,6 +180,36 @@ void Renderer::_frame_prepare(const Scene&)
         drivers::DeviceDriverVulkan::Buffer& tb = frame.transform_buffers[current_frame];
         dd->buffer_update(tb, frame.transforms_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Transform));
         dd->buffer_flush(tb, 0, (VkDeviceSize)frame.instance_count * sizeof(Transform));
+    }
+    
+    {
+    const float aspect = height ? (float)width / (float)height : 1.0f;
+    const float fov_y = radians(60.0f);
+    const float near_z = 2.0f, far_z = 5.0f;
+    // const float near_z = 0.1f, far_z = 1000.0f;
+
+    static const auto start = std::chrono::high_resolution_clock::now();
+    const float t = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
+    const float radius = 3.0f, angle = t * radians(45.0f);
+    const vec3 eye(radius * cos(angle), 1.0f, radius * sin(angle));
+
+    CameraUniform cam{};
+    cam.view = lookAt(eye, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+    cam.proj = perspective_reverse_z(fov_y, aspect, near_z, far_z);
+    cam.view_proj = cam.proj * cam.view;
+    cam.inv_view = inverse(cam.view);
+    cam.inv_proj = inverse(cam.proj);
+    cam.inv_view_proj = inverse(cam.view_proj);
+    cam.position = vec4(eye, 1.0f);
+    extract_frustum_planes(cam.view_proj, cam.frustum_planes);
+    cam.near_z = near_z;
+    cam.far_z = far_z;
+    cam.fov_y = fov_y;
+    cam.aspect = aspect;
+
+    drivers::DeviceDriverVulkan::Buffer& cb = frame.camera_buffers[current_frame];
+    dd->buffer_update(cb, &cam, sizeof(cam));
+    dd->buffer_flush(cb, 0, sizeof(cam));
     }
 }
 
