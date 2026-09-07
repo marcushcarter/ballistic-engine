@@ -114,6 +114,7 @@ void ClusterCullFeature::_create_cluster_expand_pass()
         cluster_refs_ci.device_local = true;
         b.create_buffer("ClusterRefs", cluster_refs_ci);
         
+        b.read_buffer("Geometry", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
         b.read_buffer("Instances", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
         b.read_buffer("VisibleInstances", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
         b.read_buffer("ClusterExpandArgs", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
@@ -121,6 +122,7 @@ void ClusterCullFeature::_create_cluster_expand_pass()
         b.write_buffer("ClusterCullArgs", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
     };
     cluster_expand_pass.execute = [this](RenderGraph::CommandList& cl) {
+        auto geometry = cl.graph->buffer("Geometry");
         auto inst = cl.graph->buffer("Instances");
         auto visible = cl.graph->buffer("VisibleInstances");
         auto expand_args = cl.graph->buffer("ClusterExpandArgs");
@@ -128,11 +130,13 @@ void ClusterCullFeature::_create_cluster_expand_pass()
         auto cull_args = cl.graph->buffer("ClusterCullArgs");
         
         struct Push {
+            VkDeviceAddress geometry_addr;
             VkDeviceAddress instances_addr;
             VkDeviceAddress visible_addr;
             VkDeviceAddress cluster_refs_addr;
             VkDeviceAddress args_addr;
         } pc;
+        pc.geometry_addr = geometry->device_address;
         pc.instances_addr = inst->device_address;
         pc.visible_addr = visible->device_address;
         pc.cluster_refs_addr = cluster_refs->device_address;
