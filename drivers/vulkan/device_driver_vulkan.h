@@ -124,6 +124,8 @@ struct DeviceDriverVulkan
         ImageBarrierState state;
         uint32_t bindless_sampled = UINT32_MAX;
         uint32_t bindless_storage = UINT32_MAX;
+        std::vector<VkImageView> mip_views;
+        std::vector<uint32_t> mip_storage_slots;
         VkExtent2D extent = {};
         VkFormat format = VK_FORMAT_UNDEFINED;
         VkImageAspectFlagBits aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -136,13 +138,15 @@ struct DeviceDriverVulkan
     Image _image_create(const ImageCreateInfo& p_ci, VkExtent2D p_extent);
     Error _image_bind(Image& r_image, VmaAllocation p_allocation);
     Error _image_create_view(Image& r_image);
+    VkImageView _image_create_mip_view(const Image& p_image, uint32_t p_mip);
 
     Image image_create_dedicated(const ImageCreateInfo& p_ci, VkExtent2D p_extent);
     void image_free(Image& r_image);
+    void image_clear(Image& r_image, const VkClearColorValue& p_color);
 
     Image image_create_texture(const void* p_rgba, uint32_t p_width, uint32_t p_height, const char* p_name);
     Image image_create_texture_compressed(VkFormat p_format, uint32_t p_width, uint32_t p_height, uint32_t p_mip_count, const void* p_blocks, VkDeviceSize p_blocks_size, const char* p_name);
-    
+
 	/*****************/
 	/**** BUFFERS ****/
 	/*****************/

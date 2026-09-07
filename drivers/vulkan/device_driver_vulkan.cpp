@@ -247,6 +247,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.scalarBlockLayout, Failed, "GPU lacks scalarBlockLayout, required for POD SSBO struct layout.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.drawIndirectCount, Failed, "GPU lacks drawIndirectCount, required for GPU-driven indirect-count draws.");
+        LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.vulkanMemoryModel, Failed, "GPU lacks vulkanMemoryModel, required for single-pass Hi-Z.");
 
     void* create_info_next = nullptr;
 
@@ -270,6 +271,8 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     features_1_2.scalarBlockLayout = VK_TRUE;
     features_1_2.storageBuffer8BitAccess = VK_TRUE;
     features_1_2.drawIndirectCount = VK_TRUE;
+    features_1_2.vulkanMemoryModel = VK_TRUE;
+    features_1_2.vulkanMemoryModelDeviceScope = VK_TRUE;
     features_1_2.pNext = create_info_next;
     create_info_next = &features_1_2;
 
@@ -819,6 +822,18 @@ Error DeviceDriverVulkan::_image_create_view(Image& r_image)
     return Ok;
 }
 
+VkImageView DeviceDriverVulkan::_image_create_mip_view(const Image& p_image, uint32_t p_mip)
+{
+    VkImageViewCreateInfo ci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    ci.image = p_image.image;
+    ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ci.format = p_image.format;
+    ci.subresourceRange = { (VkImageAspectFlags)p_image.aspect, p_mip, 1, 0, 1 };
+    VkImageView view = VK_NULL_HANDLE;
+    vkCreateImageView(device, &ci, nullptr, &view);
+    return view;
+}
+
 DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const ImageCreateInfo& p_ci, VkExtent2D p_extent)
 {
     using enum Error;
@@ -854,7 +869,20 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const Image
     LUMEN_ERR_FAIL_COND_V(e != Ok, {});
 
     if (p_ci.usage & VK_IMAGE_USAGE_SAMPLED_BIT) image.bindless_sampled = bindless_heap_alloc_sampled(image.image_view);
-    if (p_ci.usage & VK_IMAGE_USAGE_STORAGE_BIT) image.bindless_storage = bindless_heap_alloc_storage(image.image_view);
+
+    if (p_ci.usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+        if (image.mip_levels > 1) {
+            image.mip_views.resize(image.mip_levels);
+            image.mip_storage_slots.resize(image.mip_levels);
+            for (uint32_t m = 0; m < image.mip_levels; m++) {
+                image.mip_views[m] = _image_create_mip_view(image, m);
+                image.mip_storage_slots[m] = bindless_heap_alloc_storage(image.mip_views[m]);
+            }
+            image.bindless_storage = image.mip_storage_slots[0];
+        } else {
+            image.bindless_storage = bindless_heap_alloc_storage(image.image_view);
+        }
+    }
 
     return image;
 }
@@ -878,7 +906,62 @@ void DeviceDriverVulkan::image_free(Image& r_image)
         bindless_heap_free_storage(r_image.bindless_storage);
         r_image.bindless_storage = UINT32_MAX;
     }
+    for (uint32_t m = 0; m < (uint32_t)r_image.mip_views.size(); m++) {
+        if (m < r_image.mip_storage_slots.size() && r_image.mip_storage_slots[m] != UINT32_MAX) bindless_heap_free_storage(r_image.mip_storage_slots[m]);
+        if (r_image.mip_views[m]) vkDestroyImageView(device, r_image.mip_views[m], nullptr);
+    }
+    r_image.mip_views.clear();
+    r_image.mip_storage_slots.clear();
     r_image.state = {};
+}
+
+void DeviceDriverVulkan::image_clear(Image& r_image, const VkClearColorValue& p_color)
+{
+    CommandPool pool = command_pool_create(cd->graphics_queue_family, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    VkCommandBuffer cmd = command_buffer_create(pool);
+    command_buffer_begin(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    VkImageSubresourceRange range{};
+    range.aspectMask = (VkImageAspectFlags)r_image.aspect;
+    range.baseMipLevel = 0;
+    range.levelCount = r_image.mip_levels;
+    range.baseArrayLayer = 0;
+    range.layerCount = r_image.layers;
+
+    VkImageMemoryBarrier2 to_dst{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    to_dst.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    to_dst.srcAccessMask = 0;
+    to_dst.dstStageMask = VK_PIPELINE_STAGE_2_CLEAR_BIT;
+    to_dst.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    to_dst.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    to_dst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    to_dst.image = r_image.image;
+    to_dst.subresourceRange = range;
+
+    VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dep.imageMemoryBarrierCount = 1;
+    dep.pImageMemoryBarriers = &to_dst;
+    vkCmdPipelineBarrier2(cmd, &dep);
+
+    vkCmdClearColorImage(cmd, r_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &p_color, 1, &range);
+
+    command_buffer_end(cmd);
+
+    VkCommandBufferSubmitInfo cmd_si{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO };
+    cmd_si.commandBuffer = cmd;
+    VkSubmitInfo2 submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+    submit.commandBufferInfoCount = 1;
+    submit.pCommandBufferInfos = &cmd_si;
+
+    VkFence fence = fence_create(false);
+    vkQueueSubmit2(queue_families[cd->graphics_queue_family][0].queue, 1, &submit, fence);
+    fence_wait(fence, UINT64_MAX);
+    fence_free(fence);
+    command_pool_free(pool);
+
+    r_image.state.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    r_image.state.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT;
+    r_image.state.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 }
 
 DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_texture(const void* p_rgba, uint32_t p_width, uint32_t p_height, const char* p_name)

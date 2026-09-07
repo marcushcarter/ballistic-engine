@@ -349,7 +349,7 @@ void ClusterCullFeature::_create_cluster_raster_pass()
         cl.dd->command_bind_pipeline(cl.cmd, cluster_raster_pipe);
         cl.dd->command_bind_index_buffer(cl.cmd, ctx->geometry->index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
         cl.dd->command_bind_push_constants(cl.cmd, sizeof(pc), &pc);
-        cl.draw_indexed_indirect_count("Raster Vis", *draw_cmds, 0, *vis_clus, 0, ctx->frame->cluster_ref_capacity, sizeof(VkDrawIndexedIndirectCommand));
+        cl.draw_indexed_indirect_count("Cluster raster visibility", *draw_cmds, 0, *vis_clus, 0, ctx->frame->cluster_ref_capacity, sizeof(VkDrawIndexedIndirectCommand));
     };
 }
 
