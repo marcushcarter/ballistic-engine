@@ -37,5 +37,5 @@ void main() {
     vec3 local = mesh.pos_min + (vec3(v.position) / 65535.0) * mesh.pos_extent;
 
     gl_Position = pc.camera.view_proj * model * vec4(local, 1.0);
-    v_draw_id = id;
+    v_draw_id = ref_idx;
 }

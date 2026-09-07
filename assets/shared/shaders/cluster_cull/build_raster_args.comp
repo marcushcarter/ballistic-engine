@@ -19,14 +19,12 @@ struct DrawIndexedIndirectCommand {
 layout(buffer_reference, scalar) readonly buffer VisibleClusterBuffer { uint count; uint data[]; };
 layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
 layout(buffer_reference, scalar) writeonly buffer DrawCmdBuffer { DrawIndexedIndirectCommand cmds[]; };
-layout(buffer_reference, scalar) writeonly buffer HiZCounter { uint value; };
 
 layout(push_constant) uniform Push {
     GeometryBuffer geometry;
     ClusterRefsBuffer cluster_refs;
     VisibleClusterBuffer visible_clusters;
     DrawCmdBuffer draw_cmds;
-    HiZCounter hiz_counter;
 } pc;
 
 void main() {
@@ -46,6 +44,4 @@ void main() {
     cmd.vertex_offset = 0;
     cmd.first_instance = 0u;
     pc.draw_cmds.cmds[id] = cmd;
-
-    pc.hiz_counter.value = 0u;
 }

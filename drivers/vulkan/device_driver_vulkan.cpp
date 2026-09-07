@@ -877,7 +877,7 @@ DeviceDriverVulkan::Image DeviceDriverVulkan::image_create_dedicated(const Image
             image.mip_views[mm] = _image_create_mip_view(image, mm);
             image.mip_storage_slots[mm] = bindless_heap_alloc_storage(image.mip_views[mm]);
         }
-        image.bindless_storage = image.mip_storage_slots[0];   // base level is the "default" storage slot
+        image.bindless_storage = image.mip_storage_slots[0];
     }
 
     return image;

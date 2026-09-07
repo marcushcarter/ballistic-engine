@@ -1,0 +1,59 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+#include "common/geometry.glsl"
+#include "common/camera.glsl"
+#include "common/instances.glsl"
+
+layout(local_size_x = 64) in;
+
+// layout(set = 0, binding = 0) uniform texture2D u_textures[];
+// layout(set = 0, binding = 1) uniform image2D u_storage_images[];
+// layout(set = 0, binding = 2) uniform sampler u_samplers[];
+
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer   { uint count; uint _pad; uvec2 data[]; };
+layout(buffer_reference, scalar) readonly buffer ClusterRetestBuffer { uint count; uint data[]; };
+layout(buffer_reference, scalar) buffer VisibleClusterBuffer         { uint count; uint data[]; };
+
+layout(push_constant) uniform Push {
+    CameraBuffer camera;
+    GeometryBuffer geometry;
+    InstanceBuffer instances;
+    TransformBuffer transforms;
+    ClusterRefsBuffer cluster_refs;
+    ClusterRetestBuffer cluster_retest;
+    VisibleClusterBuffer visible_clusters;
+    uint hiz_index;
+    float px_per_unit;
+} pc;
+
+bool cull_occlusion(vec3 center_ws, float radius_ws) {
+    return false;
+}
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= pc.cluster_retest.count) return;
+
+    uint ref_idx = pc.cluster_retest.data[id];
+    uvec2 ref = pc.cluster_refs.data[ref_idx];
+    uint instance_id = ref.x;
+    uint cluster_id = ref.y;
+
+    Instance instance = pc.instances.data[instance_id];
+    mat4 model = pc.transforms.data[instance.transform_id].curr_mtx;
+    Cluster cluster = pc.geometry.clusters.data[cluster_id];
+
+    vec3 center = (model * vec4(cluster.cull_sphere.xyz, 1.0)).xyz;
+    float scale = max(length(model[0].xyz), max(length(model[1].xyz), length(model[2].xyz)));
+    float radius = cluster.cull_sphere.w * scale;
+
+    if (cull_occlusion(center, radius)) return;
+
+    uint slot = atomicAdd(pc.visible_clusters.count, 1u);
+    pc.visible_clusters.data[slot] = ref_idx;
+}

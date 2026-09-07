@@ -488,6 +488,7 @@ void RenderGraph::Builder::color_attachment(std::string_view p_name, VkAttachmen
     a.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     a.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
     a.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    if (p_load == VK_ATTACHMENT_LOAD_OP_LOAD) a.access |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
     a.is_write = true;
     a.is_attachment = true;
     a.load_op = p_load;
@@ -516,6 +517,7 @@ void RenderGraph::Builder::depth_attachment(std::string_view p_name, VkAttachmen
     a.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     a.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
     a.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    if (p_load == VK_ATTACHMENT_LOAD_OP_LOAD) a.access |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     a.is_write = true;
     a.is_attachment = true;
     a.is_depth = true;

@@ -27,6 +27,7 @@ void Renderer::_create_hiz(uint32_t p_width, uint32_t p_height)
     ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
     ci.fixed_width = hw;
     ci.fixed_height = hh;
+    ci.pool = dd->image_persistent_pool;
     ci.name = "hiz";
     hiz = dd->image_create_dedicated(ci, { hw, hh });
 
@@ -266,7 +267,6 @@ Error Renderer::begin_frame(const Scene& p_scene)
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
-    // graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
 
     graph.import_buffer("Camera", &frame.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
