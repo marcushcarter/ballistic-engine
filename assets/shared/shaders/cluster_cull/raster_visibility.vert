@@ -9,8 +9,9 @@
 #include "common/camera.glsl"
 #include "common/instances.glsl"
 
-layout(buffer_reference, scalar) readonly buffer VisibleClusterBuffer { uint count; uint data[]; };
 layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
+layout(buffer_reference, scalar) readonly buffer ScatterBuffer { uint data[]; };
+layout(buffer_reference, scalar) readonly buffer DrawMetaBuffer { uint base[]; };
 
 layout(push_constant) uniform Push {
     CameraBuffer camera;
@@ -18,14 +19,15 @@ layout(push_constant) uniform Push {
     InstanceBuffer instances;
     TransformBuffer transforms;
     ClusterRefsBuffer cluster_refs;
-    VisibleClusterBuffer visible_clusters;
+    ScatterBuffer scatter;
+    DrawMetaBuffer draw_meta;
 } pc;
 
 layout(location = 0) flat out uint v_draw_id;
 
 void main() {
-    uint id = uint(gl_DrawIDARB);
-    uint ref_idx = pc.visible_clusters.data[id];
+    uint base = pc.draw_meta.base[gl_DrawIDARB];
+    uint ref_idx = pc.scatter.data[base + gl_InstanceIndex];
     uvec2 ref = pc.cluster_refs.data[ref_idx];
     uint instance_id = ref.x;
 

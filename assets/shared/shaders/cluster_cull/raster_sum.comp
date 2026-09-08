@@ -1,0 +1,90 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+
+#include "common/geometry.glsl"
+
+// Single-workgroup exclusive scan over the dense per-cluster_id count buffer.
+// One dispatch of one workgroup, so the cross-tile carry needs no device-wide
+// sync (forward progress is guaranteed within a workgroup). Cost is
+// O(cluster_head) — proportional to loaded geometry, not the visible set.
+#define WG_SIZE 256u
+layout(local_size_x = 256) in;
+
+struct DrawIndexedIndirectCommand {
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int vertex_offset;
+    uint first_instance;
+};
+
+layout(buffer_reference, scalar) readonly buffer CountBuffer { uint data[]; };
+layout(buffer_reference, scalar) writeonly buffer OffsetBuffer { uint data[]; };
+layout(buffer_reference, scalar) writeonly buffer DrawCmdBuffer { DrawIndexedIndirectCommand cmds[]; };
+layout(buffer_reference, scalar) writeonly buffer DrawMetaBuffer { uint base[]; };
+layout(buffer_reference, scalar) buffer DrawCountBuffer { uint value; };
+
+layout(push_constant) uniform Push {
+    GeometryBuffer geometry;
+    CountBuffer counts;
+    OffsetBuffer offsets;
+    DrawCmdBuffer draw_cmds;
+    DrawMetaBuffer draw_meta;
+    DrawCountBuffer draw_count;
+    uint cluster_count;
+} pc;
+
+shared uint s_scan[WG_SIZE];
+
+void main() {
+    uint lid = gl_LocalInvocationID.x;
+
+    if (lid == 0u) pc.draw_count.value = 0u;
+    barrier();
+
+    uint carry = 0u; // running exclusive base across tiles (same in every lane)
+    uint tiles = (pc.cluster_count + WG_SIZE - 1u) / WG_SIZE;
+
+    for (uint t = 0u; t < tiles; t++) {
+        uint cid = t * WG_SIZE + lid;
+        uint c = (cid < pc.cluster_count) ? pc.counts.data[cid] : 0u;
+
+        // Inclusive Hillis-Steele scan of this tile in shared memory.
+        s_scan[lid] = c;
+        barrier();
+        for (uint off = 1u; off < WG_SIZE; off <<= 1u) {
+            uint v = (lid >= off) ? s_scan[lid - off] : 0u;
+            barrier();
+            s_scan[lid] += v;
+            barrier();
+        }
+
+        uint inclusive = s_scan[lid];
+        uint exclusive = carry + inclusive - c; // this cluster's base slot
+
+        if (cid < pc.cluster_count) {
+            pc.offsets.data[cid] = exclusive;
+
+            if (c > 0u) {
+                Cluster cluster = pc.geometry.clusters.data[cid];
+                uint draw = atomicAdd(pc.draw_count.value, 1u);
+
+                DrawIndexedIndirectCommand cmd;
+                cmd.index_count = cluster.index_count;
+                cmd.instance_count = c;             // hardware instancing across shared refs
+                cmd.first_index = cluster.index_base;
+                cmd.vertex_offset = 0;
+                cmd.first_instance = 0u;            // base carried via draw_meta
+                pc.draw_cmds.cmds[draw] = cmd;
+                pc.draw_meta.base[draw] = exclusive;
+            }
+        }
+
+        // Advance carry by this tile's total (inclusive value of the last lane).
+        carry += s_scan[WG_SIZE - 1u];
+        barrier(); // protect s_scan before the next tile overwrites it
+    }
+}
