@@ -5,7 +5,7 @@
 #include <drivers/imgui/imgui_driver.h>
 #include <core/rendering/renderer.h>
 #include <core/project/project.h>
-#include <core/scene/scenes.h>
+#include <core/world/world.h>
 #include <core/base/tasks.h>
 #include <core/base/error.h>
 #include <string>
@@ -37,8 +37,8 @@ struct Application
 
     drivers::ImGuiDriver imgui;
 
-    Scenes scenes;
-    Scene scene;
+    bool paused = false;
+    World world;
 
     Project project;
 
@@ -58,6 +58,10 @@ struct Application
     
     virtual bool wants_docking() const { return false; }
     virtual bool wants_custom_titlebar() const { return false; }
+    virtual bool should_tick_game() const { return !paused; }
+    
+    virtual void update_camera(float p_dt) { (void)p_dt; }
+    virtual const Camera& active_camera() const { return *world.active_camera; }
 
     virtual RenderPath* create_render_path() = 0;
 

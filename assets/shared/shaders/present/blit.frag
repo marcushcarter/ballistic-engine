@@ -10,7 +10,7 @@ layout(push_constant) uniform PC {
 } pc;
 
 vec4 sample_bindless(uint tex_id, uint sampler_id, vec2 uv) {
-    return texture(sampler2D(uTextures[nonuniformEXT(tex_id)], u_samplers[nonuniformEXT(sampler_id)]), uv);
+    return texture(sampler2D(u_textures[nonuniformEXT(tex_id)], u_samplers[nonuniformEXT(sampler_id)]), uv);
 }
 
 vec3 linear_to_srgb(vec3 color) {

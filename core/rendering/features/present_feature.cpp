@@ -10,21 +10,24 @@ Error PresentFeature::create_resources()
     present_pass.category = "Present";
     present_pass.setup = [](RenderGraph::Builder& b) {
         b.color_attachment("Backbuffer", VK_ATTACHMENT_LOAD_OP_CLEAR, { { 0.1f, 0.1f, 0.1f, 1.0f } });
-        b.read_image("Out_Color", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        b.read_image("G_Albedo", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
     };
     present_pass.execute = [this](RenderGraph::CommandList& cl) {
         auto* bb = cl.graph->image("Backbuffer");
-        auto* out_color = cl.graph->image("Out_Color");
+        auto* out_color = cl.graph->image("G_Albedo");
+
+        struct Push{
+            uint32_t src_id;
+            uint32_t sampler_id;
+        } pc;
+        pc.src_id = out_color->bindless_sampled;
+        pc.sampler_id = cl.dd->default_sampler.bindless_sampler;
 
         cl.dd->command_render_set_viewport(cl.cmd, {{{0,0},bb->extent}});
         cl.dd->command_render_set_scissor(cl.cmd, {{{0,0},bb->extent}});
-        
         cl.dd->command_bind_pipeline(cl.cmd, blit_pipeline);
-        struct { uint32_t srcIndex, samplerIndex; } pc;
-        pc.srcIndex = out_color->bindless_sampled;
-        pc.samplerIndex = cl.dd->default_sampler.bindless_sampler;
         cl.dd->command_bind_push_constants(cl.cmd, sizeof(pc), &pc);
-        cl.draw("gamma_blit", 3);
+        cl.draw("blit", 3);
     };
 
     return Error::Ok;
@@ -34,8 +37,8 @@ Error PresentFeature::create_pipelines()
 {
     VkRenderPass rp = ctx->graph->acquire_render_pass(present_pass);
 
-    EmbeddedResource::Blob blit_vert_blob = EmbeddedResource::load(L"SHADERS_BLIT_VERT");
-    EmbeddedResource::Blob blit_frag_blob = EmbeddedResource::load(L"SHADERS_BLIT_FRAG");
+    EmbeddedResource::Blob blit_vert_blob = EmbeddedResource::load(L"SHADERS_PRESENT_BLIT_VERT");
+    EmbeddedResource::Blob blit_frag_blob = EmbeddedResource::load(L"SHADERS_PRESENT_BLIT_FRAG");
     VkShaderModule blit_vs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Vertex, .glsl = (const char*)blit_vert_blob.data, .glsl_size = blit_vert_blob.size, .name = "present/blit.vert" });
     VkShaderModule blit_fs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Fragment, .glsl = (const char*)blit_frag_blob.data, .glsl_size = blit_frag_blob.size, .name = "present/blit.frag" });
 

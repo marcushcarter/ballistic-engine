@@ -1,11 +1,11 @@
 #include <core/rendering/renderer.h>
-#include <core/scene/scenes.h>
+#include <core/world/world.h>
 #include <core/assets/asset_common.h>
 #include <core/io/embedded_resource.h>
-#include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
+#include <iostream>
 #include <cmath>
 
 namespace lumen {
@@ -211,19 +211,6 @@ Error Renderer::apply_pending_size()
 /**** FRAME ****/
 /****************/
 
-static glm::mat4 perspective_reverse_z(float fov_y, float aspect, float near_z, float far_z)
-{
-    const float f = 1.0f / std::tan(fov_y * 0.5f);
-    glm::mat4 m(0.0f);
-    m[0][0] = f / aspect;
-    m[1][1] = f;
-    // reverse-Z, [0,1] depth: near maps to 1, far to 0
-    m[2][2] = near_z / (far_z - near_z);
-    m[2][3] = -1.0f;
-    m[3][2] = (far_z * near_z) / (far_z - near_z);
-    return m;  // column-major glm
-}
-
 static void extract_frustum_planes(const glm::mat4& vp, glm::vec4 out[6])
 {
     auto row = [&](int i) { return glm::vec4(vp[0][i], vp[1][i], vp[2][i], vp[3][i]); };
@@ -237,38 +224,46 @@ static void extract_frustum_planes(const glm::mat4& vp, glm::vec4 out[6])
     for (int i = 0; i < 6; i++) out[i] /= glm::length(glm::vec3(out[i])); // normalize
 }
 
-void Renderer::_frame_build(const Scene& p_scene)
+glm::mat4 grid_transform(uint32_t iterator, float spacing = 1.0f)
 {
-    (void)p_scene;
+    constexpr uint32_t width = 10;
+    constexpr uint32_t height = 10;
+
+    uint32_t x = iterator % width;
+    uint32_t y = (iterator / width) % height;
+    uint32_t z = iterator / (width * height);
+
+    return glm::translate(
+        glm::mat4(1.0f),
+        glm::vec3(x, y, z) * spacing
+    );
+}
+
+void Renderer::_frame_build(const World& p_world)
+{
+    (void)p_world;
     frame.reset();
     
     // Debug: 10 instance per mesh.
     for (uint32_t i = 0; i < (uint32_t)geometry.meshes.size(); i++) {
-        for (int j=0; j<10; j++) {
+        for (int j=0; j<1000; j++) {
             frame.instances_scratch.push_back(Instance{ i, (uint32_t)frame.transforms_scratch.size(), 0, 0 });
-            frame.transforms_scratch.push_back(Transform{ mat4(1.0f), mat4(1.0f) });
+            frame.transforms_scratch.push_back(Transform{ translate(mat4(1.0f), glm::vec3(j, 0.0f, 0.0f)), translate(mat4(1.0f), glm::vec3(j, 0.0f, 0.0f)) });
+            // frame.transforms_scratch.push_back(Transform{ mat4(1.0f), grid_transform(j) });
             frame.cluster_ref_capacity += geometry.meshes[i].cluster_count;
         }
     }
     frame.instance_count = (uint32_t)frame.instances_scratch.size();
     
     const float aspect = height ? (float)width / (float)height : 1.0f;
-    const float fov_y = radians(60.0f);
-    const float near_z = 2.0f, far_z = 5.0f;
-
-    static const auto start = std::chrono::high_resolution_clock::now();
-    const float t = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
-    const float radius = 3.0f, angle = t * radians(45.0f);
-    const vec3 eye(radius * cos(angle), 1.0f, radius * sin(angle));
-
-    const mat4 view = lookAt(eye, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-    const mat4 proj = perspective_reverse_z(fov_y, aspect, near_z, far_z);
 
     const mat4 prev_vp = frame.camera.curr_view_proj;
-    frame.camera.curr_view_proj = proj * view;
-    frame.camera.prev_view_proj = (frame_number == 0) ? frame.camera.curr_view_proj : prev_vp;
-    frame.camera.position = vec4(eye, 1.0f);
+    frame.camera.curr_view_proj = active_camera.view_proj(aspect);
+    frame.camera.prev_view_proj = camera_cut_pending ? frame.camera.curr_view_proj : prev_vp;
+    frame.camera.position = vec4(active_camera.position, 1.0f);
     extract_frustum_planes(frame.camera.curr_view_proj, frame.camera.frustum_planes);
+    
+    camera_cut_pending = false;
 }
 
 void Renderer::_frame_upload()
@@ -288,7 +283,7 @@ void Renderer::_frame_upload()
     dd->buffer_flush(cb, 0, sizeof(CameraUniform));
 }
 
-Error Renderer::begin_frame(const Scene& p_scene)
+Error Renderer::begin_frame(const World& p_world)
 {
     using enum Error;
     
@@ -301,7 +296,7 @@ Error Renderer::begin_frame(const Scene& p_scene)
     err = dd->swapchain_acquire_next_image(image_available_semaphores[current_frame]);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
-    _frame_build(p_scene);
+    _frame_build(p_world);
     _frame_upload();
 
     graph.begin(current_frame);

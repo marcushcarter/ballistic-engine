@@ -136,7 +136,7 @@ Error EditorApplication::open_project(const std::filesystem::path& p_root)
     render_path_request(new EditorRenderPath());
     project_manager.add_recent(project.root, project.name);
 
-    active_tab = scene_tabs.empty() ? 0 : 1;
+    active_tab = 1;
     pending_tab = active_tab;
 
     return Ok;
@@ -289,7 +289,6 @@ void EditorApplication::_draw_titlebar()
 
     _titlebar_menus(L);
     if (show_tabs) _titlebar_tabs(L);
-    _titlebar_cog(L);
     _titlebar_logo(L);
 
     ImGui::End();
@@ -388,51 +387,48 @@ void EditorApplication::_titlebar_tabs(const TitlebarLayout& L)
         _titlebar_block(L, ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
         ImGui::PopID();
 
-        for (int i = 0; i < (int)scene_tabs.size(); ++i) {
-            ImGui::PushID(i + 1);
-            if (ImGui::BeginTabItem(scene_tabs[i].c_str(), nullptr, flags(i + 1))) { active_tab = i + 1; ImGui::EndTabItem(); }
-            _titlebar_block(L, ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-            ImGui::PopID();
-        }
+        ImGui::PushID(1);
+        if (ImGui::BeginTabItem("World", nullptr, flags(1))) { active_tab = 1; ImGui::EndTabItem(); }
+        _titlebar_block(L, ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+        ImGui::PopID();
+
         ImGui::EndTabBar();
     }
     pending_tab = -1;
     ImGui::PopStyleVar(2);
 }
 
-void EditorApplication::_titlebar_cog(const TitlebarLayout& L)
-{    
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-
-    const char* cog = ICON_FA_GEAR;
-    ImVec2 cog_sz = ImGui::CalcTextSize(cog);
-    float pad = 12.0f;
-    float box = L.tab_h;
-    ImVec2 cog_pos(L.origin.x + L.width - pad - box, L.origin.y + L.menu_h);
-
-    ImGui::SetCursorScreenPos(cog_pos);
-    ImGui::InvisibleButton("##settings_cog", ImVec2(box, box));
-    { ImVec2 mn = ImGui::GetItemRectMin(), mx = ImGui::GetItemRectMax(); _titlebar_block(L, mn, mx); }
-
-    bool hovered = ImGui::IsItemHovered();
-    if (ImGui::IsItemClicked()) popups.open("Editor Settings");
-
-    ImU32 col = hovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-    dl->AddText(ImVec2(cog_pos.x + (box - cog_sz.x) * 0.5f, cog_pos.y + (box - cog_sz.y) * 0.5f), col, cog);
-}
-
 void EditorApplication::_titlebar_logo(const TitlebarLayout& L)
 {
+    // ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    // VkDescriptorSet logo_set = imgui.texture_cache.get(resources.icon_image.image_view);
+    // dl->PushClipRect(L.origin, ImVec2(L.origin.x + L.width, L.origin.y + L.bar_h), false);
+    // float m = 6.0f;
+    // ImVec2 mn(L.origin.x + m, L.origin.y + m);
+    // ImVec2 mx(L.origin.x + L.logo - m, L.origin.y + L.bar_h - m);
+    // if (logo_set) dl->AddImage(logo_set, mn, mx);
+    // else dl->AddRectFilled(mn, mx, ImGui::GetColorU32(ImGuiCol_Text), 4.0f);
+    // dl->PopClipRect();
+
+
     ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    const float m = 6.0f;
+    const ImVec2 mn(L.origin.x + m, L.origin.y + m);
+    const ImVec2 mx(L.origin.x + L.logo - m, L.origin.y + L.bar_h - m);
 
     VkDescriptorSet logo_set = imgui.texture_cache.get(resources.icon_image.image_view);
     dl->PushClipRect(L.origin, ImVec2(L.origin.x + L.width, L.origin.y + L.bar_h), false);
-    float m = 6.0f;
-    ImVec2 mn(L.origin.x + m, L.origin.y + m);
-    ImVec2 mx(L.origin.x + L.logo - m, L.origin.y + L.bar_h - m);
     if (logo_set) dl->AddImage(logo_set, mn, mx);
     else dl->AddRectFilled(mn, mx, ImGui::GetColorU32(ImGuiCol_Text), 4.0f);
     dl->PopClipRect();
+    ImGui::SetCursorScreenPos(L.origin);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.12f));
+    if (ImGui::Button("##LumenLogo", ImVec2(L.logo, L.bar_h))) popups.open("About Lumen");
+    ImGui::PopStyleColor(3);
 }
 
 void EditorApplication::_titlebar_help_menu()
@@ -631,7 +627,26 @@ EditorContext EditorApplication::_make_context()
     ctx.open_project_callback = [this](const auto& path){this->open_project(path);};
     ctx.close_project_callback = [this](){this->close_project();};
     
+    ctx.pie_is_playing = [this]{ return mode == EditorMode::Play; };
+    ctx.pie_toggle_play = [this]{ mode = (mode == EditorMode::Play) ? EditorMode::Edit : EditorMode::Play; paused = false; renderer.camera_cut(); };
+    ctx.pie_is_paused = [this]{ return paused; };
+    ctx.pie_toggle_pause = [this]{ paused = !paused; };
+    
     return ctx;
+}
+
+void EditorApplication::update_camera(float p_dt)
+{
+    if (mode == EditorMode::Edit) editor_camera.update(p_dt);
+    if (mode == EditorMode::Play) {
+        
+    }
+}
+
+const Camera& EditorApplication::active_camera() const
+{
+    if (mode == EditorMode::Edit) return editor_camera.camera;
+    return *world.active_camera;
 }
 
 }

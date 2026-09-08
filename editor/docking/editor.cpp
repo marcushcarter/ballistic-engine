@@ -1,6 +1,7 @@
 #include <editor/docking/editor.h>
 #include <drivers/imgui/imgui_helpers.h>
 #include <core/rendering/render_path/editor_render_path.h>
+#include <editor/popup/popup_manager.h>
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -24,24 +25,46 @@ void Editor::shutdown()
     panels.clear();
 }
 
-void Editor::_draw_toolbar(EditorContext&)
+void Editor::_draw_toolbar(EditorContext& ctx)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
 
-    ImGui::Button(ICON_FA_HARD_DRIVE);
+    {
+        const bool playing = ctx.pie_is_playing && ctx.pie_is_playing();
+        const bool paused = ctx.pie_is_paused && ctx.pie_is_paused();
 
-    // if (ImGui::Button(ICON_FA_PLAY)) {}
-    // ImGui::SameLine();
-    // if (ImGui::Button(ICON_FA_STOP)) {}
-    // ImGui::SameLine();
-    // ImGui::TextDisabled("Lumen");
-    // ImGui::SameLine();
+        const float btn = ImGui::GetFrameHeight();
+        const float spacing = 6.0f;
+        const int count = playing ? 2 : 1;
+        const float total = btn * count + spacing * (count - 1);
 
-    // ImGui::Text("panels=%d, rtop=%d, rbot=%d",
-    //             (int)panels.size(),
-    //             (int)right_top.panels.size(),
-    //             (int)right_bottom.panels.size());
+        ImGui::SameLine();
+        const float center_x = (ImGui::GetContentRegionMax().x - total) * 0.5f;
+        if (center_x > ImGui::GetCursorPosX()) ImGui::SetCursorPosX(center_x);
 
+        if (!playing) {
+            if (ImGui::Button(ICON_FA_PLAY, ImVec2(btn, btn)) && ctx.pie_toggle_play) ctx.pie_toggle_play();
+        } else {
+            if (ImGui::Button(ICON_FA_STOP, ImVec2(btn, btn)) && ctx.pie_toggle_play) ctx.pie_toggle_play();
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::Button(paused ? ICON_FA_PLAY : ICON_FA_PAUSE, ImVec2(btn, btn)) && ctx.pie_toggle_pause) ctx.pie_toggle_pause();
+        }
+    }
+
+    ImGui::SameLine();
+    ImGui::Text("%.1f FPS (%.2f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+
+    const char* cog = ICON_FA_GEAR " Settings";
+    float settings_width = ImGui::CalcTextSize(cog).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SameLine(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - settings_width);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.1f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.15f));
+    if (ImGui::Button(cog)) {
+        ctx.popups->open("Editor Settings");
+    }
+    ImGui::PopStyleColor(3);
+    
     ImGui::PopStyleVar();
 }
 

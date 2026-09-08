@@ -6,6 +6,7 @@
 #include <editor/asset_manager/asset_manager.h>
 #include <editor/editor_settings.h>
 #include <editor/editor_resources.h>
+#include <editor/editor_camera.h>
 #include <editor/assets/asset_import_tracker.h>
 #include <editor/popup/popup_manager.h>
 #include <core/rendering/render_path/editor_render_path.h>
@@ -16,6 +17,8 @@ namespace lumen {
 
 struct EditorApplication : Application
 {
+    enum class EditorMode { Edit, Play } mode = EditorMode::Edit;
+
     ProjectManager project_manager;
     AssetManager asset_manager;
     Editor editor;
@@ -27,7 +30,7 @@ struct EditorApplication : Application
 
     int active_tab = 0;
     int pending_tab = -1;
-    std::vector<std::string> scene_tabs { "Scene" };
+    EditorCamera editor_camera;
 
     Error on_init() override;
     void on_shutdown() override;
@@ -54,7 +57,6 @@ struct EditorApplication : Application
     void _titlebar_menus(const TitlebarLayout& L);
     void _titlebar_caption_buttons(const TitlebarLayout& L);
     void _titlebar_tabs(const TitlebarLayout& L);
-    void _titlebar_cog(const TitlebarLayout& L);
     void _titlebar_logo(const TitlebarLayout& L);
     void _titlebar_block(const TitlebarLayout& L, ImVec2 min, ImVec2 max);
     
@@ -65,6 +67,10 @@ struct EditorApplication : Application
 
     bool wants_docking() const override { return true; }
     bool wants_custom_titlebar() const override { return false; }
+    bool should_tick_game() const override { return mode == EditorMode::Play && !paused; }
+    
+    void update_camera(float p_dt) override;
+    const Camera& active_camera() const override;
     
     RenderPath* create_render_path() { return new EditorRenderPath(); }
 };

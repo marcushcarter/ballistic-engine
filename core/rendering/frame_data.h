@@ -1,7 +1,6 @@
 #pragma once
 #include <drivers/vulkan/device_driver_vulkan.h>
-#include <core/rendering/scene_gpu.h>
-#include <core/scene/scenes.h>
+#include <core/rendering/world_gpu.h>
 #include <core/base/error.h>
 #include <vector>
 #include <glm/glm.hpp>

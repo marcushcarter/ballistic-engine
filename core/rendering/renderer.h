@@ -5,12 +5,13 @@
 #include <core/rendering/resources/geometry_pool.h>
 #include <core/rendering/frame_data.h>
 #include <core/rendering/render_context.h>
-#include <core/rendering/scene_gpu.h>
+#include <core/rendering/world_gpu.h>
+#include <core/world/camera.h>
 #include <core/base/error.h>
 
 namespace lumen {
 
-struct Scene;
+struct World;
 
 struct Renderer
 {
@@ -72,14 +73,20 @@ struct Renderer
 
     FrameData frame;
 
+    Camera active_camera;
+    bool camera_cut_pending = true;
+
+    void set_camera(const Camera& p_camera) { active_camera = p_camera; }
+    void camera_cut() { camera_cut_pending = true; }
+
     std::vector<drivers::DeviceDriverVulkan::Buffer> instance_buffers;
     std::vector<drivers::DeviceDriverVulkan::Buffer> transform_buffers;
     std::vector<drivers::DeviceDriverVulkan::Buffer> camera_buffers;
 
-    void _frame_build(const Scene& p_scene);
+    void _frame_build(const World& p_world);
     void _frame_upload();
 
-    Error begin_frame(const Scene& p_scene);
+    Error begin_frame(const World& p_world);
     void compile();
     Error record();
     Error end_frame();

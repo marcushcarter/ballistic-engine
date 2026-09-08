@@ -104,7 +104,10 @@ int Application::run()
         renderer.apply_pending_size();
 
         imgui.begin_frame(renderer.frame_number, renderer.frame_count, renderer.resize_epoch);
-        renderer.begin_frame(scene);
+        
+        update_camera((float)delta);
+        renderer.set_camera(active_camera());
+        renderer.begin_frame(world);
         
         render_path->build(renderer.graph);
         renderer.compile();
@@ -133,7 +136,7 @@ Error Application::project_load(const std::filesystem::path &p_root)
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     err = renderer.load(project.content_dir);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
-    err = scenes.load();
+    err = world.load();
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     return Ok;
 }
@@ -142,7 +145,7 @@ void Application::project_unload()
 {
     dd.device_wait_idle();
     renderer.unload();
-    scenes.unload();
+    world.unload();
     project.unload();
 }
 

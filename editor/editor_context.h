@@ -38,6 +38,11 @@ struct EditorContext
         
     std::function<void(const std::filesystem::path&)> open_project_callback;
     std::function<void()> close_project_callback;
+
+    std::function<bool()> pie_is_playing;
+    std::function<void()> pie_toggle_play;
+    std::function<bool()> pie_is_paused;
+    std::function<void()> pie_toggle_pause;
 };
 
 }
