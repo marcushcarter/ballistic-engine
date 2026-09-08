@@ -42,6 +42,35 @@ void Renderer::_destroy_hiz()
     hiz = {};
 }
 
+void Renderer::_create_gbuffer(uint32_t p_width, uint32_t p_height)
+{
+    auto make = [&](drivers::DeviceDriverVulkan::Image& img, VkFormat fmt, const char* name) {
+        drivers::DeviceDriverVulkan::ImageCreateInfo ci{};
+        ci.format = fmt;
+        ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+        ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        ci.mip_levels = 1;
+        ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
+        ci.fixed_width = p_width;
+        ci.fixed_height = p_height;
+        ci.name = name;
+        img = dd->image_create_dedicated(ci, { p_width, p_height });
+    };
+    make(g_normal, VK_FORMAT_R16G16_UNORM, "g_normal");
+    make(g_albedo, VK_FORMAT_R8G8B8A8_UNORM, "g_albedo");
+    make(g_material, VK_FORMAT_R8G8B8A8_UNORM, "g_material");
+    make(g_motion, VK_FORMAT_R16G16_SFLOAT, "g_motion");
+}
+
+void Renderer::_destroy_gbuffer()
+{
+    if (g_normal.image) dd->image_free(g_normal);
+    if (g_albedo.image) dd->image_free(g_albedo);
+    if (g_material.image) dd->image_free(g_material);
+    if (g_motion.image) dd->image_free(g_motion);
+    g_normal = {}; g_albedo = {}; g_material = {}; g_motion = {};
+}
+
 Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
 {
     using enum Error;
@@ -91,6 +120,7 @@ void Renderer::shutdown()
     frame.shutdown();
     
     _destroy_hiz();
+    _destroy_gbuffer();
 
     for (uint32_t i = 0; i < frame_count; i++) {
         dd->fence_free(in_flight_fences[i]);
@@ -150,9 +180,11 @@ Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
 
     Error err = graph.set_size(p_width, p_height);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
-
+    
     _destroy_hiz();
     _create_hiz(p_width, p_height);
+    _destroy_gbuffer();
+    _create_gbuffer(p_width, p_height);
 
     return Ok;
 }
@@ -267,6 +299,10 @@ Error Renderer::begin_frame(const Scene& p_scene)
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+    graph.import_image("G_Normal", &g_normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    graph.import_image("G_Albedo", &g_albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    graph.import_image("G_Material", &g_material, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    graph.import_image("G_Motion", &g_motion, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
 
     graph.import_buffer("Camera", &frame.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);

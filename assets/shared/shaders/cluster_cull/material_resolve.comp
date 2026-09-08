@@ -1,0 +1,54 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+#include "common/geometry.glsl"
+#include "common/camera.glsl"
+#include "common/instances.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+
+layout(set = 0, binding = 0) uniform texture2D u_textures[];
+layout(set = 0, binding = 1) writeonly uniform image2D u_storage[];
+layout(set = 0, binding = 2) uniform sampler u_samplers[];
+
+// layout(set = 0, binding = 0) uniform texture2D  u_textures[];
+// layout(set = 0, binding = 0) uniform utexture2D u_utextures[];
+// layout(set = 0, binding = 1, rgba8) uniform image2D u_img_rgba8[];
+// layout(set = 0, binding = 1, rg16)  uniform image2D u_img_rg16[];
+// layout(set = 0, binding = 1, rg16f) uniform image2D u_img_rg16f[];
+
+layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
+
+layout(push_constant) uniform Push {
+    CameraBuffer camera;
+    GeometryBuffer geometry;
+    InstanceBuffer instances;
+    TransformBuffer transforms;
+    ClusterRefsBuffer cluster_refs;
+    uint vis_index;
+    uint depth_index;
+    uint normal_slot;
+    uint albedo_slot;
+    uint material_slot;
+    uint motion_slot;
+    uint width;
+    uint height;
+} pc;
+
+void main() {
+    uvec2 px = gl_GlobalInvocationID.xy;
+    if (px.x >= pc.width || px.y >= pc.height) return;
+    ivec2 coord = ivec2(px);
+    
+    imageStore(u_storage[nonuniformEXT(pc.albedo_slot)], coord, vec4(1, 1, 1, 1));            // linear for now
+    imageStore(u_storage [nonuniformEXT(pc.normal_slot)], coord, vec4(0.5, 0.5, 0.0, 0.0)); // oct(0,0,1)
+    imageStore(u_storage[nonuniformEXT(pc.material_slot)], coord, vec4(0.5, 0.0, 1.0, 0.0)); // rough .5 / metal 0 / ao 1
+    imageStore(u_storage[nonuniformEXT(pc.motion_slot)], coord, vec4(0.0));
+
+}

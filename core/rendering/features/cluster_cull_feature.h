@@ -31,6 +31,7 @@ struct ClusterCullFeature : Feature
     drivers::DeviceDriverVulkan::Pipeline hiz_spd_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_retest_args_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_retest_pipe;
+    drivers::DeviceDriverVulkan::Pipeline material_resolve_pipe;
 
     void _create_clear_visible_pass();
     void _create_instance_cull_pass();

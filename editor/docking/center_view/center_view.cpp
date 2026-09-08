@@ -63,13 +63,22 @@ void CenterView::_draw_scene(EditorContext& ctx)
     right_overlay.begin(pos, size, OverlayBar::Align::Right);
     if (right_overlay.combo("##viewport_source", src_label, 160.0f)) {
         bool any = false;
+
         for (const RenderGraph::ImageResource& r : ctx.renderer->graph.image_resources) {
             if (!r.image || r.image->state.layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) continue;
-            if (r.image_create_info.sizing != drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::ViewportRelative) continue;
+            // if (r.image_create_info.sizing != drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::ViewportRelative) continue; // excluded imported targets
             any = true;
             const std::string& name = ctx.renderer->graph.debug_names[r.name_id];
             if (ImGui::Selectable(name.c_str(), r.name_id == selected_name_id)) selected_name_id = r.name_id;
         }
+
+        // for (const RenderGraph::ImageResource& r : ctx.renderer->graph.image_resources) {
+        //     if (!r.image || r.image->state.layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) continue;
+        //     if (r.image_create_info.sizing != drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::ViewportRelative) continue;
+        //     any = true;
+        //     const std::string& name = ctx.renderer->graph.debug_names[r.name_id];
+        //     if (ImGui::Selectable(name.c_str(), r.name_id == selected_name_id)) selected_name_id = r.name_id;
+        // }
         if (!any) ImGui::TextDisabled("(no inspectable resources)");
 
         ImGui::EndCombo();

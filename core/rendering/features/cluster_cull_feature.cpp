@@ -319,11 +319,8 @@ void ClusterCullFeature::_create_cluster_raster_pass()
         vis_ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         b.create_image("G_Visibility", vis_ci);
 
-        VkClearValue vis_clear{}; vis_clear.color.uint32[0] = 0u;
-        VkClearValue depth_clear{}; depth_clear.depthStencil = { 0.0f, 0 };
-        b.color_attachment("G_Visibility", VK_ATTACHMENT_LOAD_OP_CLEAR, vis_clear);
-        b.depth_attachment("G_Depth", VK_ATTACHMENT_LOAD_OP_CLEAR, depth_clear);
-
+        b.color_attachment("G_Visibility", VK_ATTACHMENT_LOAD_OP_CLEAR, VkClearValue{.color = {.uint32 = {0u, 0u, 0u, 0u}}});      
+        b.depth_attachment("G_Depth", VK_ATTACHMENT_LOAD_OP_CLEAR, [] { VkClearValue v{}; v.depthStencil = { 0.0f, 0 }; return v; }());
         b.read_buffer("ClusterDrawCmds", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.read_buffer("VisibleClusters", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.read_buffer("Camera", VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
@@ -388,7 +385,7 @@ void ClusterCullFeature::_create_hiz_build_pass()
             int32_t base_w, base_h;
             uint32_t depth_index, mips, num_workgroups, _pad;
             uint32_t mip_slot[16];
-        } pc{};
+        } pc;
         pc.counter = counter->device_address;
         pc.base_w = (int32_t)depth->extent.width;
         pc.base_h = (int32_t)depth->extent.height;
@@ -537,9 +534,8 @@ void ClusterCullFeature::_create_cluster_raster_2_pass()
     cluster_raster_pass_2.name = "ClusterRaster2";
     cluster_raster_pass_2.category = "ClusterCull";
     cluster_raster_pass_2.setup = [this](RenderGraph::Builder& b) {
-        b.color_attachment("G_Visibility", VK_ATTACHMENT_LOAD_OP_LOAD, {});
-        b.depth_attachment("G_Depth", VK_ATTACHMENT_LOAD_OP_LOAD, {});
-
+        b.color_attachment("G_Visibility", VK_ATTACHMENT_LOAD_OP_LOAD);
+        b.depth_attachment("G_Depth", VK_ATTACHMENT_LOAD_OP_LOAD);
         b.read_buffer("ClusterDrawCmds2", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.read_buffer("VisibleClusters2", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.read_buffer("Camera", VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
@@ -605,7 +601,7 @@ void ClusterCullFeature::_create_hiz_build_2_pass()
             int32_t base_w, base_h;
             uint32_t depth_index, mips, num_workgroups, _pad;
             uint32_t mip_slot[16];
-        } pc{};
+        } pc;
         pc.counter = counter->device_address;
         pc.base_w = (int32_t)depth->extent.width;
         pc.base_h = (int32_t)depth->extent.height;
@@ -622,13 +618,72 @@ void ClusterCullFeature::_create_hiz_build_2_pass()
 
 void ClusterCullFeature::_create_material_resolve_pass()
 {
-    material_resolve_pass.name = "MaterialFill";
-    material_resolve_pass.category = "MaterialShade";
+    material_resolve_pass.name = "MaterialResolve";
+    material_resolve_pass.category = "Material";
     material_resolve_pass.setup = [this](RenderGraph::Builder& b) {
-        (void)b;
+        b.read_image("G_Visibility", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        b.read_image("G_Depth", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        b.read_buffer("Camera", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
+        b.read_buffer("Geometry", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
+        b.read_buffer("Instances", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+        b.read_buffer("Transforms", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+        b.read_buffer("ClusterRefs", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+
+        b.write_image("G_Normal", VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+        b.write_image("G_Albedo", VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+        b.write_image("G_Material", VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+        b.write_image("G_Motion", VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
     };
     material_resolve_pass.execute = [this](RenderGraph::CommandList& cl) {
-        (void)cl;
+        auto vis = cl.graph->image("G_Visibility");
+        auto depth = cl.graph->image("G_Depth");
+        auto normal = cl.graph->image("G_Normal");
+        auto albedo = cl.graph->image("G_Albedo");
+        auto matl = cl.graph->image("G_Material");
+        auto motion = cl.graph->image("G_Motion");
+        auto camera = cl.graph->buffer("Camera");
+        auto geometry = cl.graph->buffer("Geometry");
+        auto inst = cl.graph->buffer("Instances");
+        auto xf = cl.graph->buffer("Transforms");
+        auto refs = cl.graph->buffer("ClusterRefs");
+        
+        uint32_t gx = (vis->extent.width + 7) / 8;
+        uint32_t gy = (vis->extent.height + 7) / 8;
+
+        struct {
+            VkDeviceAddress camera_addr;
+            VkDeviceAddress geometry_addr;
+            VkDeviceAddress instances_addr;
+            VkDeviceAddress transforms_addr;
+            VkDeviceAddress cluster_refs_addr;
+            uint32_t vis_index;
+            uint32_t depth_index;
+            uint32_t normal_slot;
+            uint32_t albedo_slot;
+            uint32_t material_slot;
+            uint32_t motion_slot;
+            uint32_t width;
+            uint32_t height;
+        } pc;
+        pc.camera_addr = camera->device_address;
+        pc.geometry_addr = geometry->device_address;
+        pc.instances_addr = inst->device_address;
+        pc.transforms_addr = xf->device_address;
+        pc.cluster_refs_addr = refs->device_address;
+        pc.vis_index = vis->bindless_sampled;
+        pc.depth_index = depth->bindless_sampled;
+        pc.normal_slot = normal->bindless_storage;
+        pc.albedo_slot = albedo->bindless_storage;
+        pc.material_slot = matl->bindless_storage;
+        pc.motion_slot = motion->bindless_storage;
+        pc.width = vis->extent.width;
+        pc.height = vis->extent.height;
+
+        cl.dd->command_render_set_viewport(cl.cmd, {{ {0,0}, vis->extent }});
+        cl.dd->command_render_set_scissor(cl.cmd, {{ {0,0}, vis->extent }});
+        cl.dd->command_bind_pipeline(cl.cmd, material_resolve_pipe);
+        cl.dd->command_bind_push_constants(cl.cmd, sizeof(pc), &pc);
+        cl.dispatch("Material resolve", gx, gy);
     };
 }
 
@@ -741,6 +796,13 @@ Error ClusterCullFeature::create_pipelines()
     cluster_retest_pipe = ctx->dd->compute_pipeline_create({cs, "cluster_cull/cluster_retest"});
     ctx->dd->shader_free(cs);
     }
+    
+    {
+    EmbeddedResource::Blob comp_blob = EmbeddedResource::load(L"SHADERS_CLUSTER_CULL_MATERIAL_RESOLVE_COMP");
+    VkShaderModule cs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Compute, .glsl = (const char*)comp_blob.data, .glsl_size = comp_blob.size, .name = "cluster_cull/material_resolve.comp" });
+    material_resolve_pipe = ctx->dd->compute_pipeline_create({cs, "cluster_cull/material_resolve"});
+    ctx->dd->shader_free(cs);
+    }
 
     return Ok;
 }
@@ -757,6 +819,7 @@ void ClusterCullFeature::destroy_resources()
     ctx->dd->pipeline_free(hiz_spd_pipe);
     ctx->dd->pipeline_free(cluster_retest_args_pipe);
     ctx->dd->pipeline_free(cluster_retest_pipe);
+    ctx->dd->pipeline_free(material_resolve_pipe);
 }
 
 void ClusterCullFeature::build(RenderGraph& g)

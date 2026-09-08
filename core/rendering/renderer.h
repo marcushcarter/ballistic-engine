@@ -38,9 +38,12 @@ struct Renderer
     std::vector<VkCommandBuffer> command_buffers;
 
     drivers::DeviceDriverVulkan::Image hiz;
+    drivers::DeviceDriverVulkan::Image g_normal, g_albedo, g_material, g_motion;
 
     void _create_hiz(uint32_t p_width, uint32_t p_height);
     void _destroy_hiz();
+    void _create_gbuffer(uint32_t p_width, uint32_t p_height);
+    void _destroy_gbuffer();
 
     Error initialize(drivers::DeviceDriverVulkan& r_dd);
     void shutdown();

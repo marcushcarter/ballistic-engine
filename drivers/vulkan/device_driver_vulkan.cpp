@@ -126,7 +126,7 @@ Error DeviceDriverVulkan::_check_device_features()
         requested_device_features.x = physical_device_features.x; \
     } else \
         ((void)0)
-
+        
     requested_device_features = {};
     VK_DEVICEFEATURE_ENABLE_IF(fullDrawIndexUint32);
     VK_DEVICEFEATURE_ENABLE_IF(imageCubeArray);
@@ -154,6 +154,7 @@ Error DeviceDriverVulkan::_check_device_features()
     VK_DEVICEFEATURE_ENABLE_IF(shaderInt16);
     VK_DEVICEFEATURE_ENABLE_IF(pipelineStatisticsQuery);
     VK_DEVICEFEATURE_ENABLE_IF(occlusionQueryPrecise);
+    VK_DEVICEFEATURE_ENABLE_IF(shaderStorageImageExtendedFormats);
 
 #undef VK_DEVICEFEATURE_ENABLE_IF
 
@@ -232,6 +233,8 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     supported_features2.pNext = &supported_1_2;
     supported_1_2.pNext = &supported_1_1;
     vkGetPhysicalDeviceFeatures2(physical_device, &supported_features2);
+    
+    LUMEN_ERR_FAIL_COND_V_MSG(!physical_device_features.shaderStorageImageExtendedFormats, Failed, "GPU lacks shaderStorageImageExtendedFormats, required for r16f Hi-Z and rg16 G-buffer storage.");
 
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.storageBuffer16BitAccess, Failed, "GPU lacks storageBuffer16BitAccess, required for 16-bit vertex data.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_1.shaderDrawParameters, Failed, "GPU lacks shaderDrawParameters, required for gl_DrawID in indirect draws.");
@@ -248,7 +251,7 @@ Error DeviceDriverVulkan::_initialize_device(const std::vector<VkDeviceQueueCrea
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.storageBuffer8BitAccess, Failed, "GPU lacks storageBuffer8BitAccess, required for 8-bit skin data.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.drawIndirectCount, Failed, "GPU lacks drawIndirectCount, required for GPU-driven indirect-count draws.");
     LUMEN_ERR_FAIL_COND_V_MSG(!supported_1_2.vulkanMemoryModel, Failed, "GPU lacks vulkanMemoryModel, required for single-pass Hi-Z.");
-
+    
     void* create_info_next = nullptr;
 
     VkPhysicalDeviceVulkan13Features features_1_3{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
