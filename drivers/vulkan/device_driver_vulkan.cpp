@@ -901,10 +901,8 @@ void DeviceDriverVulkan::image_free(Image& r_image)
         bindless_heap_free_sampled(r_image.bindless_sampled);
         r_image.bindless_sampled = UINT32_MAX;
     }
-    if (r_image.bindless_storage != UINT32_MAX) {
-        bindless_heap_free_storage(r_image.bindless_storage);
-        r_image.bindless_storage = UINT32_MAX;
-    }
+    if (r_image.bindless_storage != UINT32_MAX && r_image.mip_storage_slots.empty()) bindless_heap_free_storage(r_image.bindless_storage);
+    r_image.bindless_storage = UINT32_MAX;
     for (uint32_t m = 0; m < (uint32_t)r_image.mip_views.size(); m++) {
         if (m < r_image.mip_storage_slots.size() && r_image.mip_storage_slots[m] != UINT32_MAX) bindless_heap_free_storage(r_image.mip_storage_slots[m]);
         if (r_image.mip_views[m]) vkDestroyImageView(device, r_image.mip_views[m], nullptr);
@@ -1211,19 +1209,6 @@ DeviceDriverVulkan::Buffer DeviceDriverVulkan::buffer_create(const BufferCreateI
             alloc_ci.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
     }
-
-    // bool pooled = false;
-    // const uint32_t pool_type = _pool_memory_type(p_ci.pool);
-    // if (p_ci.pool != nullptr && pool_type != UINT32_MAX) {
-    //     VkDeviceBufferMemoryRequirements dev_req{ VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS };
-    //     dev_req.pCreateInfo = &buffer_ci;
-    //     VkMemoryRequirements2 req2{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
-    //     vkGetDeviceBufferMemoryRequirements(device, &dev_req, &req2);
-    //     pooled = (req2.memoryRequirements.memoryTypeBits & (1u << pool_type)) != 0;
-    // }
-    // if (pooled) alloc_ci.pool = p_ci.pool;
-
-
 
     bool pooled = false;
     const uint32_t pool_type = _pool_memory_type(p_ci.pool);
