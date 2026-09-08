@@ -12,63 +12,34 @@ namespace lumen {
 
 using namespace glm;
 
-void Renderer::_create_hiz(uint32_t p_width, uint32_t p_height)
+/***************/
+/**** SETUP ****/
+/***************/
+
+Error Renderer::_create_dynamic_buffers()
 {
-    uint32_t hw = (p_width + 1) / 2;
-    uint32_t hh = (p_height + 1) / 2;
-    uint32_t mips = 1, m = std::max(hw, hh);
-    while (m > 1) { m >>= 1; mips++; }
+    using enum Error;
 
-    drivers::DeviceDriverVulkan::ImageCreateInfo ci{};
-    ci.format = VK_FORMAT_R16_SFLOAT;
-    ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    ci.mip_levels = mips;
-    ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
-    ci.fixed_width = hw;
-    ci.fixed_height = hh;
-    ci.pool = dd->image_persistent_pool;
-    ci.name = "hiz";
-    hiz = dd->image_create_dedicated(ci, { hw, hh });
+    instance_buffers.resize(frame_count);
+    transform_buffers.resize(frame_count);
+    camera_buffers.resize(frame_count);
+    
+    for (uint32_t i = 0; i < frame_count; i++) {
+        instance_buffers[i] = dd->buffer_create({.size = (VkDeviceSize)MAX_INSTANCES * sizeof(Instance),.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,.device_local = false,.host_visible = true,.pool = dd->bar_pool(),.name = "instances"});
+        transform_buffers[i] = dd->buffer_create({.size = (VkDeviceSize)MAX_INSTANCES * sizeof(Transform),.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,.device_local = false,.host_visible = true,.pool = dd->bar_pool(),.name = "transforms"});
+        camera_buffers[i] = dd->buffer_create({.size = sizeof(CameraUniform),.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,.device_local = false,.host_visible = true,.pool = dd->bar_pool(),.name = "camera"});
+    }
 
-    VkClearColorValue far_clear{};
-    far_clear.float32[0] = 0.0f;
-    dd->image_clear(hiz, far_clear);
+    return Ok;
 }
 
-void Renderer::_destroy_hiz()
+void Renderer::_destroy_dynamic_buffers()
 {
-    if (hiz.image) dd->image_free(hiz);
-    hiz = {};
-}
-
-void Renderer::_create_gbuffer(uint32_t p_width, uint32_t p_height)
-{
-    auto make = [&](drivers::DeviceDriverVulkan::Image& img, VkFormat fmt, const char* name) {
-        drivers::DeviceDriverVulkan::ImageCreateInfo ci{};
-        ci.format = fmt;
-        ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-        ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        ci.mip_levels = 1;
-        ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
-        ci.fixed_width = p_width;
-        ci.fixed_height = p_height;
-        ci.name = name;
-        img = dd->image_create_dedicated(ci, { p_width, p_height });
-    };
-    make(g_normal, VK_FORMAT_R16G16_UNORM, "g_normal");
-    make(g_albedo, VK_FORMAT_R8G8B8A8_UNORM, "g_albedo");
-    make(g_material, VK_FORMAT_R8G8B8A8_UNORM, "g_material");
-    make(g_motion, VK_FORMAT_R16G16_SFLOAT, "g_motion");
-}
-
-void Renderer::_destroy_gbuffer()
-{
-    if (g_normal.image) dd->image_free(g_normal);
-    if (g_albedo.image) dd->image_free(g_albedo);
-    if (g_material.image) dd->image_free(g_material);
-    if (g_motion.image) dd->image_free(g_motion);
-    g_normal = {}; g_albedo = {}; g_material = {}; g_motion = {};
+    for (uint32_t i = 0; i < frame_count; i++) {
+        dd->buffer_free(instance_buffers[i]);
+        dd->buffer_free(transform_buffers[i]);
+        dd->buffer_free(camera_buffers[i]);
+    }
 }
 
 Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
@@ -101,8 +72,8 @@ Error Renderer::initialize(drivers::DeviceDriverVulkan& r_dd)
     err = graph.initialize(r_dd, frame_count);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     graph.declare_image_format("Backbuffer", dd->swapchain.format);
-    
-    err = frame.initialize(r_dd);
+
+    err = _create_dynamic_buffers();
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
     set_size(1, 1);
@@ -117,10 +88,9 @@ void Renderer::shutdown()
     unload();
     
     graph.shutdown();
-    frame.shutdown();
-    
-    _destroy_hiz();
-    _destroy_gbuffer();
+
+    _destroy_dynamic_buffers();
+    _destroy_hiz_pyramid();
 
     for (uint32_t i = 0; i < frame_count; i++) {
         dd->fence_free(in_flight_fences[i]);
@@ -128,6 +98,10 @@ void Renderer::shutdown()
         dd->command_pool_free(command_pools[i]);
     }
 }
+
+/*****************/
+/**** PROJECT ****/
+/*****************/
 
 Error Renderer::load(const std::filesystem::path& p_content_dir)
 {
@@ -166,6 +140,40 @@ void Renderer::unload()
     geometry.free();
 }
 
+/****************/
+/**** SIZING ****/
+/****************/
+
+void Renderer::_create_hiz_pyramid(uint32_t p_width, uint32_t p_height)
+{
+    uint32_t hw = (p_width + 1) / 2;
+    uint32_t hh = (p_height + 1) / 2;
+    uint32_t mips = 1, m = std::max(hw, hh);
+    while (m > 1) { m >>= 1; mips++; }
+
+    drivers::DeviceDriverVulkan::ImageCreateInfo ci{};
+    ci.format = VK_FORMAT_R16_SFLOAT;
+    ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    ci.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    ci.mip_levels = mips;
+    ci.sizing = drivers::DeviceDriverVulkan::ImageCreateInfo::Sizing::Fixed;
+    ci.fixed_width = hw;
+    ci.fixed_height = hh;
+    ci.pool = dd->image_persistent_pool;
+    ci.name = "hiz_pyramid";
+    hiz_pyramid = dd->image_create_dedicated(ci, { hw, hh });
+
+    VkClearColorValue far_clear{};
+    far_clear.float32[0] = 0.0f;
+    dd->image_clear(hiz_pyramid, far_clear);
+}
+
+void Renderer::_destroy_hiz_pyramid()
+{
+    if (hiz_pyramid.image) dd->image_free(hiz_pyramid);
+    hiz_pyramid = {};
+}
+
 Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
 {
     using enum Error;
@@ -181,10 +189,8 @@ Error Renderer::set_size(uint32_t p_width, uint32_t p_height)
     Error err = graph.set_size(p_width, p_height);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
     
-    _destroy_hiz();
-    _create_hiz(p_width, p_height);
-    _destroy_gbuffer();
-    _create_gbuffer(p_width, p_height);
+    _destroy_hiz_pyramid();
+    _create_hiz_pyramid(p_width, p_height);
 
     return Ok;
 }
@@ -200,6 +206,10 @@ Error Renderer::apply_pending_size()
     if (pending_width == 0 || pending_height == 0) return Error::Ok;
     return set_size(pending_width, pending_height);
 }
+
+/****************/
+/**** FRAME ****/
+/****************/
 
 static glm::mat4 perspective_reverse_z(float fov_y, float aspect, float near_z, float far_z)
 {
@@ -227,8 +237,12 @@ static void extract_frustum_planes(const glm::mat4& vp, glm::vec4 out[6])
     for (int i = 0; i < 6; i++) out[i] /= glm::length(glm::vec3(out[i])); // normalize
 }
 
-void Renderer::_frame_prepare(const Scene&)
+void Renderer::_frame_build(const Scene& p_scene)
 {
+    (void)p_scene;
+    frame.reset();
+    
+    // Debug: 10 instance per mesh.
     for (uint32_t i = 0; i < (uint32_t)geometry.meshes.size(); i++) {
         for (int j=0; j<10; j++) {
             frame.instances_scratch.push_back(Instance{ i, (uint32_t)frame.transforms_scratch.size(), 0, 0 });
@@ -236,48 +250,42 @@ void Renderer::_frame_prepare(const Scene&)
             frame.cluster_ref_capacity += geometry.meshes[i].cluster_count;
         }
     }
-
     frame.instance_count = (uint32_t)frame.instances_scratch.size();
-
-    if (frame.instance_count != 0) {
-        drivers::DeviceDriverVulkan::Buffer& ib = frame.instance_buffers[current_frame];
-        dd->buffer_update(ib, frame.instances_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Instance));
-        dd->buffer_flush(ib, 0, (VkDeviceSize)frame.instance_count * sizeof(Instance));
-
-        drivers::DeviceDriverVulkan::Buffer& tb = frame.transform_buffers[current_frame];
-        dd->buffer_update(tb, frame.transforms_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Transform));
-        dd->buffer_flush(tb, 0, (VkDeviceSize)frame.instance_count * sizeof(Transform));
-    }
     
-    {
     const float aspect = height ? (float)width / (float)height : 1.0f;
     const float fov_y = radians(60.0f);
     const float near_z = 2.0f, far_z = 5.0f;
-    // const float near_z = 0.1f, far_z = 1000.0f;
 
     static const auto start = std::chrono::high_resolution_clock::now();
     const float t = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
     const float radius = 3.0f, angle = t * radians(45.0f);
     const vec3 eye(radius * cos(angle), 1.0f, radius * sin(angle));
 
-    CameraUniform cam{};
-    cam.view = lookAt(eye, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-    cam.proj = perspective_reverse_z(fov_y, aspect, near_z, far_z);
-    cam.view_proj = cam.proj * cam.view;
-    cam.inv_view = inverse(cam.view);
-    cam.inv_proj = inverse(cam.proj);
-    cam.inv_view_proj = inverse(cam.view_proj);
-    cam.position = vec4(eye, 1.0f);
-    extract_frustum_planes(cam.view_proj, cam.frustum_planes);
-    cam.near_z = near_z;
-    cam.far_z = far_z;
-    cam.fov_y = fov_y;
-    cam.aspect = aspect;
+    const mat4 view = lookAt(eye, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+    const mat4 proj = perspective_reverse_z(fov_y, aspect, near_z, far_z);
 
-    drivers::DeviceDriverVulkan::Buffer& cb = frame.camera_buffers[current_frame];
-    dd->buffer_update(cb, &cam, sizeof(cam));
-    dd->buffer_flush(cb, 0, sizeof(cam));
+    const mat4 prev_vp = frame.camera.curr_view_proj;
+    frame.camera.curr_view_proj = proj * view;
+    frame.camera.prev_view_proj = (frame_number == 0) ? frame.camera.curr_view_proj : prev_vp;
+    frame.camera.position = vec4(eye, 1.0f);
+    extract_frustum_planes(frame.camera.curr_view_proj, frame.camera.frustum_planes);
+}
+
+void Renderer::_frame_upload()
+{
+    if (frame.instance_count != 0) {
+        drivers::DeviceDriverVulkan::Buffer& ib = instance_buffers[current_frame];
+        dd->buffer_update(ib, frame.instances_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Instance));
+        dd->buffer_flush(ib, 0, (VkDeviceSize)frame.instance_count * sizeof(Instance));
+
+        drivers::DeviceDriverVulkan::Buffer& tb = transform_buffers[current_frame];
+        dd->buffer_update(tb, frame.transforms_scratch.data(), (VkDeviceSize)frame.instance_count * sizeof(Transform));
+        dd->buffer_flush(tb, 0, (VkDeviceSize)frame.instance_count * sizeof(Transform));
     }
+    
+    drivers::DeviceDriverVulkan::Buffer& cb = camera_buffers[current_frame];
+    dd->buffer_update(cb, &frame.camera, sizeof(CameraUniform));
+    dd->buffer_flush(cb, 0, sizeof(CameraUniform));
 }
 
 Error Renderer::begin_frame(const Scene& p_scene)
@@ -293,21 +301,17 @@ Error Renderer::begin_frame(const Scene& p_scene)
     err = dd->swapchain_acquire_next_image(image_available_semaphores[current_frame]);
     LUMEN_ERR_FAIL_COND_V(err != Ok, err);
 
-    frame.update(p_scene, current_frame);
-    _frame_prepare(p_scene);
+    _frame_build(p_scene);
+    _frame_upload();
 
     graph.begin(current_frame);
     graph.import_image("Backbuffer", &sc.images[sc.image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    graph.import_image("HiZ", &hiz, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
-    graph.import_image("G_Normal", &g_normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    graph.import_image("G_Albedo", &g_albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    graph.import_image("G_Material", &g_material, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    graph.import_image("G_Motion", &g_motion, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    graph.import_image("HiZ", &hiz_pyramid, VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
 
-    graph.import_buffer("Camera", &frame.camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Camera", &camera_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
     graph.import_buffer("Geometry", &geometry.address_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    graph.import_buffer("Instances", &frame.instance_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
-    graph.import_buffer("Transforms", &frame.transform_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Instances", &instance_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
+    graph.import_buffer("Transforms", &transform_buffers[current_frame], VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 0);
 
     return Ok;
 }

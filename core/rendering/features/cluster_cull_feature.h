@@ -11,12 +11,12 @@ struct ClusterCullFeature : Feature
     RenderGraph::Pass cluster_expand_pass;
     RenderGraph::Pass cluster_cull_args_pass;
     RenderGraph::Pass cluster_cull_pass;
-    RenderGraph::Pass build_raster_args_pass;
+    RenderGraph::Pass cluster_raster_args_pass;
     RenderGraph::Pass cluster_raster_pass;
     RenderGraph::Pass hiz_build_pass;
     RenderGraph::Pass cluster_retest_args_pass;
     RenderGraph::Pass cluster_retest_pass;
-    RenderGraph::Pass build_raster_args_pass_2;
+    RenderGraph::Pass cluster_raster_args_pass_2;
     RenderGraph::Pass cluster_raster_pass_2;
     RenderGraph::Pass hiz_build_pass_2;
     RenderGraph::Pass material_resolve_pass;
@@ -26,7 +26,7 @@ struct ClusterCullFeature : Feature
     drivers::DeviceDriverVulkan::Pipeline cluster_expand_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_cull_args_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_cull_pipe;
-    drivers::DeviceDriverVulkan::Pipeline build_raster_args_pipe;
+    drivers::DeviceDriverVulkan::Pipeline cluster_raster_args_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_raster_pipe;
     drivers::DeviceDriverVulkan::Pipeline hiz_spd_pipe;
     drivers::DeviceDriverVulkan::Pipeline cluster_retest_args_pipe;
@@ -39,12 +39,12 @@ struct ClusterCullFeature : Feature
     void _create_cluster_expand_pass();
     void _create_cluster_cull_args_pass();
     void _create_cluster_cull_pass();
-    void _create_build_raster_args_pass();
+    void _create_cluster_raster_args_pass();
     void _create_cluster_raster_pass();
     void _create_hiz_build_pass();
     void _create_cluster_retest_args_pass();
     void _create_cluster_retest_pass();
-    void _create_build_raster_args_2_pass();
+    void _create_cluster_raster_args_2_pass();
     void _create_cluster_raster_2_pass();
     void _create_hiz_build_2_pass();
     void _create_material_resolve_pass();

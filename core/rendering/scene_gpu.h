@@ -9,20 +9,10 @@ using namespace glm;
 static constexpr uint32_t MAX_INSTANCES = 64u * 1024;
 
 struct CameraUniform {
-    mat4 view;
-    mat4 proj;
-    mat4 view_proj;
-    mat4 inv_view;
-    mat4 inv_proj;
-    mat4 inv_view_proj;
-
+    mat4 prev_view_proj;
+    mat4 curr_view_proj;
     vec4 position;
     vec4 frustum_planes[6];
-
-    float near_z;
-    float far_z;
-    float fov_y;
-    float aspect;
 };
 
 struct Instance {

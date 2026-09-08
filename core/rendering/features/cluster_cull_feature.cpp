@@ -261,11 +261,11 @@ void ClusterCullFeature::_create_cluster_cull_pass()
     };
 }
 
-void ClusterCullFeature::_create_build_raster_args_pass()
+void ClusterCullFeature::_create_cluster_raster_args_pass()
 {
-    build_raster_args_pass.name = "BuildRasterArgs1";
-    build_raster_args_pass.category = "ClusterCull";
-    build_raster_args_pass.setup = [this](RenderGraph::Builder& b) {
+    cluster_raster_args_pass.name = "BuildRasterArgs1";
+    cluster_raster_args_pass.category = "ClusterCull";
+    cluster_raster_args_pass.setup = [this](RenderGraph::Builder& b) {
         drivers::DeviceDriverVulkan::BufferCreateInfo cmds_ci{};
         cmds_ci.size = (VkDeviceSize)ctx->frame->cluster_ref_capacity * sizeof(VkDrawIndexedIndirectCommand);
         cmds_ci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
@@ -278,7 +278,7 @@ void ClusterCullFeature::_create_build_raster_args_pass()
         b.read_buffer("ClusterCullArgs", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.write_buffer("ClusterDrawCmds", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
     };
-    build_raster_args_pass.execute = [this](RenderGraph::CommandList& cl) {
+    cluster_raster_args_pass.execute = [this](RenderGraph::CommandList& cl) {
         auto geometry = cl.graph->buffer("Geometry");
         auto cluster_refs = cl.graph->buffer("ClusterRefs");
         auto vis_clus = cl.graph->buffer("VisibleClusters");
@@ -296,7 +296,7 @@ void ClusterCullFeature::_create_build_raster_args_pass()
         pc.visible_clusters_addr = vis_clus->device_address;
         pc.draw_cmds_addr = draw_cmds->device_address;
 
-        cl.dd->command_bind_pipeline(cl.cmd, build_raster_args_pipe);
+        cl.dd->command_bind_pipeline(cl.cmd, cluster_raster_args_pipe);
         cl.dd->command_bind_push_constants(cl.cmd, sizeof(pc), &pc);
         cl.dispatch_indirect("Build raster args 1", *cull_args);
     };
@@ -488,11 +488,11 @@ void ClusterCullFeature::_create_cluster_retest_pass()
     };
 }
 
-void ClusterCullFeature::_create_build_raster_args_2_pass()
+void ClusterCullFeature::_create_cluster_raster_args_2_pass()
 {
-    build_raster_args_pass_2.name = "BuildRasterArgs2";
-    build_raster_args_pass_2.category = "ClusterCull";
-    build_raster_args_pass_2.setup = [this](RenderGraph::Builder& b) {
+    cluster_raster_args_pass_2.name = "BuildRasterArgs2";
+    cluster_raster_args_pass_2.category = "ClusterCull";
+    cluster_raster_args_pass_2.setup = [this](RenderGraph::Builder& b) {
         drivers::DeviceDriverVulkan::BufferCreateInfo cmds_ci{};
         cmds_ci.size = (VkDeviceSize)ctx->frame->cluster_ref_capacity * sizeof(VkDrawIndexedIndirectCommand);
         cmds_ci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
@@ -505,7 +505,7 @@ void ClusterCullFeature::_create_build_raster_args_2_pass()
         b.read_buffer("ClusterRetestArgs", VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT);
         b.write_buffer("ClusterDrawCmds2", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
     };
-    build_raster_args_pass_2.execute = [this](RenderGraph::CommandList& cl) {
+    cluster_raster_args_pass_2.execute = [this](RenderGraph::CommandList& cl) {
         auto geometry = cl.graph->buffer("Geometry");
         auto cluster_refs = cl.graph->buffer("ClusterRefs");
         auto vis_clus = cl.graph->buffer("VisibleClusters2");
@@ -523,7 +523,7 @@ void ClusterCullFeature::_create_build_raster_args_2_pass()
         pc.visible_clusters_addr = vis_clus->device_address;
         pc.draw_cmds_addr = draw_cmds->device_address;
 
-        cl.dd->command_bind_pipeline(cl.cmd, build_raster_args_pipe);
+        cl.dd->command_bind_pipeline(cl.cmd, cluster_raster_args_pipe);
         cl.dd->command_bind_push_constants(cl.cmd, sizeof(pc), &pc);
         cl.dispatch_indirect("Build raster args", *retest_args);
     };
@@ -621,6 +621,31 @@ void ClusterCullFeature::_create_material_resolve_pass()
     material_resolve_pass.name = "MaterialResolve";
     material_resolve_pass.category = "Material";
     material_resolve_pass.setup = [this](RenderGraph::Builder& b) {
+        
+        drivers::DeviceDriverVulkan::ImageCreateInfo normal_ci{};
+        normal_ci.name = "G_Normal";
+        normal_ci.format = VK_FORMAT_R16G16_UNORM;
+        normal_ci.usage  = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        b.create_image("G_Normal", normal_ci);
+
+        drivers::DeviceDriverVulkan::ImageCreateInfo albedo_ci{};
+        albedo_ci.name = "G_Albedo";
+        albedo_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        albedo_ci.usage  = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        b.create_image("G_Albedo", albedo_ci);
+
+        drivers::DeviceDriverVulkan::ImageCreateInfo material_ci{};
+        material_ci.name = "G_Material";
+        material_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        material_ci.usage  = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        b.create_image("G_Material", material_ci);
+
+        drivers::DeviceDriverVulkan::ImageCreateInfo motion_ci{};
+        motion_ci.name = "G_Motion";
+        motion_ci.format = VK_FORMAT_R16G16_SFLOAT;
+        motion_ci.usage  = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        b.create_image("G_Motion", motion_ci);
+
         b.read_image("G_Visibility", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
         b.read_image("G_Depth", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
         b.read_buffer("Camera", VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_UNIFORM_READ_BIT);
@@ -695,12 +720,12 @@ Error ClusterCullFeature::create_resources()
     _create_cluster_expand_pass();
     _create_cluster_cull_args_pass();
     _create_cluster_cull_pass();
-    _create_build_raster_args_pass();
+    _create_cluster_raster_args_pass();
     _create_cluster_raster_pass();
     _create_hiz_build_pass();
     _create_cluster_retest_args_pass();
     _create_cluster_retest_pass();
-    _create_build_raster_args_2_pass();
+    _create_cluster_raster_args_2_pass();
     _create_cluster_raster_2_pass();
     _create_hiz_build_2_pass();
     _create_material_resolve_pass();
@@ -747,9 +772,9 @@ Error ClusterCullFeature::create_pipelines()
     }
     
     {
-    EmbeddedResource::Blob comp_blob = EmbeddedResource::load(L"SHADERS_CLUSTER_CULL_BUILD_RASTER_ARGS_COMP");
-    VkShaderModule cs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Compute, .glsl = (const char*)comp_blob.data, .glsl_size = comp_blob.size, .name = "cluster_cull/build_raster_args.comp" });
-    build_raster_args_pipe = ctx->dd->compute_pipeline_create({cs, "cluster_cull/build_raster_args"});
+    EmbeddedResource::Blob comp_blob = EmbeddedResource::load(L"SHADERS_CLUSTER_CULL_CLUSTER_RASTER_ARGS_COMP");
+    VkShaderModule cs = ctx->dd->shader_create({ .stage = drivers::DeviceDriverVulkan::ShaderStage::Compute, .glsl = (const char*)comp_blob.data, .glsl_size = comp_blob.size, .name = "cluster_cull/cluster_raster_args.comp" });
+    cluster_raster_args_pipe = ctx->dd->compute_pipeline_create({cs, "cluster_cull/cluster_raster_args"});
     ctx->dd->shader_free(cs);
     }
 
@@ -814,7 +839,7 @@ void ClusterCullFeature::destroy_resources()
     ctx->dd->pipeline_free(cluster_expand_pipe);
     ctx->dd->pipeline_free(cluster_cull_args_pipe);
     ctx->dd->pipeline_free(cluster_cull_pipe);
-    ctx->dd->pipeline_free(build_raster_args_pipe);
+    ctx->dd->pipeline_free(cluster_raster_args_pipe);
     ctx->dd->pipeline_free(cluster_raster_pipe);
     ctx->dd->pipeline_free(hiz_spd_pipe);
     ctx->dd->pipeline_free(cluster_retest_args_pipe);
@@ -831,12 +856,12 @@ void ClusterCullFeature::build(RenderGraph& g)
     g.add(&cluster_expand_pass);
     g.add(&cluster_cull_args_pass);
     g.add(&cluster_cull_pass);
-    g.add(&build_raster_args_pass);
+    g.add(&cluster_raster_args_pass);
     g.add(&cluster_raster_pass);
     g.add(&hiz_build_pass);
     g.add(&cluster_retest_args_pass);
     g.add(&cluster_retest_pass);
-    g.add(&build_raster_args_pass_2);
+    g.add(&cluster_raster_args_pass_2);
     g.add(&cluster_raster_pass_2);
     g.add(&hiz_build_pass_2);
     g.add(&material_resolve_pass);

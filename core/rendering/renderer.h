@@ -5,6 +5,7 @@
 #include <core/rendering/resources/geometry_pool.h>
 #include <core/rendering/frame_data.h>
 #include <core/rendering/render_context.h>
+#include <core/rendering/scene_gpu.h>
 #include <core/base/error.h>
 
 namespace lumen {
@@ -15,18 +16,14 @@ struct Renderer
 {
     drivers::DeviceDriverVulkan* dd = nullptr;
 
+    /***************/
+    /**** SETUP ****/
+    /***************/
+
     RenderGraph graph;
     
     TextureCache textures;
     GeometryPool geometry;
-    FrameData frame;
-
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint64_t resize_epoch = 0;
-    
-    uint32_t pending_width = 0;
-    uint32_t pending_height = 0;
     
     uint32_t frame_count = 1;
     uint32_t current_frame = 0;
@@ -37,25 +34,51 @@ struct Renderer
     std::vector<drivers::DeviceDriverVulkan::CommandPool> command_pools;
     std::vector<VkCommandBuffer> command_buffers;
 
-    drivers::DeviceDriverVulkan::Image hiz;
-    drivers::DeviceDriverVulkan::Image g_normal, g_albedo, g_material, g_motion;
-
-    void _create_hiz(uint32_t p_width, uint32_t p_height);
-    void _destroy_hiz();
-    void _create_gbuffer(uint32_t p_width, uint32_t p_height);
-    void _destroy_gbuffer();
+    Error _create_dynamic_buffers();
+    void _destroy_dynamic_buffers();
 
     Error initialize(drivers::DeviceDriverVulkan& r_dd);
     void shutdown();
+    
+    /*****************/
+    /**** PROJECT ****/
+    /*****************/
 
     Error load(const std::filesystem::path& p_content_dir);
     void unload();
+
+    /****************/
+    /**** SIZING ****/
+    /****************/
+    
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t pending_width = 0;
+    uint32_t pending_height = 0;
+    uint64_t resize_epoch = 0;
+
+    drivers::DeviceDriverVulkan::Image hiz_pyramid;
+
+    void _create_hiz_pyramid(uint32_t p_width, uint32_t p_height);
+    void _destroy_hiz_pyramid();
 
     void request_size(uint32_t p_width, uint32_t p_height);
     Error apply_pending_size();
     Error set_size(uint32_t p_width, uint32_t p_height);
 
-    void _frame_prepare(const Scene& p_scene);
+    /****************/
+    /**** FRAME ****/
+    /****************/
+
+    FrameData frame;
+
+    std::vector<drivers::DeviceDriverVulkan::Buffer> instance_buffers;
+    std::vector<drivers::DeviceDriverVulkan::Buffer> transform_buffers;
+    std::vector<drivers::DeviceDriverVulkan::Buffer> camera_buffers;
+
+    void _frame_build(const Scene& p_scene);
+    void _frame_upload();
+
     Error begin_frame(const Scene& p_scene);
     void compile();
     Error record();

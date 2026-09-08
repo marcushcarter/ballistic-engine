@@ -12,16 +12,12 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-
+layout(set = 0, binding = 0) uniform utexture2D u_textures_uint[];
 layout(set = 0, binding = 0) uniform texture2D u_textures[];
-layout(set = 0, binding = 1) writeonly uniform image2D u_storage[];
-layout(set = 0, binding = 2) uniform sampler u_samplers[];
 
-// layout(set = 0, binding = 0) uniform texture2D  u_textures[];
-// layout(set = 0, binding = 0) uniform utexture2D u_utextures[];
-// layout(set = 0, binding = 1, rgba8) uniform image2D u_img_rgba8[];
-// layout(set = 0, binding = 1, rg16)  uniform image2D u_img_rg16[];
-// layout(set = 0, binding = 1, rg16f) uniform image2D u_img_rg16f[];
+layout(set = 0, binding = 1, rgba8) uniform image2D u_storage_rgba8[];
+layout(set = 0, binding = 1, rg16)  uniform image2D u_storage_rg16[];
+layout(set = 0, binding = 1, rg16f) uniform image2D u_storage_rg16f[];
 
 layout(buffer_reference, scalar) readonly buffer ClusterRefsBuffer { uint count; uint _pad; uvec2 data[]; };
 
@@ -45,10 +41,25 @@ void main() {
     uvec2 px = gl_GlobalInvocationID.xy;
     if (px.x >= pc.width || px.y >= pc.height) return;
     ivec2 coord = ivec2(px);
-    
-    imageStore(u_storage[nonuniformEXT(pc.albedo_slot)], coord, vec4(1, 1, 1, 1));            // linear for now
-    imageStore(u_storage [nonuniformEXT(pc.normal_slot)], coord, vec4(0.5, 0.5, 0.0, 0.0)); // oct(0,0,1)
-    imageStore(u_storage[nonuniformEXT(pc.material_slot)], coord, vec4(0.5, 0.0, 1.0, 0.0)); // rough .5 / metal 0 / ao 1
-    imageStore(u_storage[nonuniformEXT(pc.motion_slot)], coord, vec4(0.0));
 
+    float depth = texelFetch(u_textures[nonuniformEXT(pc.depth_index)], coord, 0).r;
+
+    if (depth == 0.0) {
+        imageStore(u_storage_rgba8[nonuniformEXT(pc.albedo_slot)], coord, vec4(0));
+        // imageStore(u_storage_rg16 [nonuniformEXT(pc.normal_slot)], coord, vec4(0.5, 0.5, 0.0, 0.0));
+        // imageStore(u_storage_rgba8[nonuniformEXT(pc.material_slot)], coord, vec4(0.0));
+        // imageStore(u_storage_rg16f[nonuniformEXT(pc.motion_slot)], coord, vec4(0.0));
+        return;
+    }
+
+    uvec2 v = texelFetch(u_textures_uint[nonuniformEXT(pc.vis_index)], coord, 0).xy;
+
+    // turn cluster into color (Unreal Debug)
+    // uint h = v.x * 2654435761u;
+    // vec3 dbg = vec3(float(h & 0xffu), float((h >> 8) & 0xffu), float((h >> 16) & 0xffu)) / 255.0;
+
+    imageStore(u_storage_rgba8[nonuniformEXT(pc.albedo_slot)], coord, vec4(1, 1, 1, 1));
+    // imageStore(u_storage_rg16 [nonuniformEXT(pc.normal_slot)], coord, vec4(0.5, 0.5, 0.0, 0.0));
+    // imageStore(u_storage_rgba8[nonuniformEXT(pc.material_slot)], coord, vec4(0.5, 0.0, 1.0, 0.0));
+    // imageStore(u_storage_rg16f[nonuniformEXT(pc.motion_slot)], coord, vec4(0.0));
 }
